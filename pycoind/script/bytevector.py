@@ -23,15 +23,16 @@
 
 import operator
 
-__all__ = ['ByteVector']
+__all__ = ["ByteVector"]
 
 
 def get_vector(value):
-    'Convert an integer into a byte-vector string.'
+    "Convert an integer into a byte-vector string."
 
-    if value == 0: return ''
+    if value == 0:
+        return ""
 
-    vector = [ ]
+    vector = []
 
     sign = 1
     if value < 1:
@@ -52,7 +53,7 @@ def get_vector(value):
 
 
 def get_value(vector):
-    'Convert a byte-vector string into an integer'
+    "Convert a byte-vector string into an integer"
 
     if len(vector) == 0:
         return 0
@@ -61,7 +62,7 @@ def get_value(vector):
 
     sign = 1
     if vector[0] & 0x80:
-        vector[0] = (vector[0] & 0x7f)
+        vector[0] = vector[0] & 0x7F
         sign = -1
 
     value = 0
@@ -73,8 +74,7 @@ def get_value(vector):
 
 
 class ByteVector(object):
-
-    def __init__(self, vector = ''):
+    def __init__(self, vector=""):
         self.set_vector(vector)
 
     value = property(lambda s: s.__value)
@@ -91,7 +91,6 @@ class ByteVector(object):
     @staticmethod
     def from_value(value):
         return ByteVector(get_vector(value))
-
 
     # Binary operators
 
@@ -113,7 +112,7 @@ class ByteVector(object):
     def __divmod__(self, other):
         return ByteVector.from_value(divmod(self.value, other.value))
 
-    def __pow__(self, other, modulo = None):
+    def __pow__(self, other, modulo=None):
         if modulo is None:
             return ByteVector.from_value(pow(self.value, other.value))
         return ByteVector.from_value(pow(self.value, other.value, modulo))
@@ -142,7 +141,6 @@ class ByteVector(object):
     def __truediv__(self, other):
         return ByteVector.from_value(operator.truediv(self.value, other.value))
 
-
     # In-place operators
 
     def __iadd__(self, other):
@@ -166,7 +164,7 @@ class ByteVector(object):
     def __imod__(self, other):
         self.set_value(self.value % other.value)
 
-    def __ipow__(self, other, modulo = None):
+    def __ipow__(self, other, modulo=None):
         if modulo is None:
             self.set_value(pow(self.value, other.value))
         self.set_value(pow(self.value, other.value, modulo))
@@ -186,7 +184,6 @@ class ByteVector(object):
     def __ior__(self, other):
         self.set_value(self.value | other.value)
 
-
     # Unary operators
 
     def __neg__(self):
@@ -201,34 +198,34 @@ class ByteVector(object):
     def __invert__(self):
         return ByteVector("".join(chr(~c) for c in self.vector))
 
-
     # Type conversion
 
     def __int__(self):
         return self.value
 
     def __long__(self):
-        return long(self.value)
+        return int(self.value)
 
     def __float__(self):
         return float(self.value)
 
-
     # Display
 
-    #def __oct__(self):
+    # def __oct__(self):
     #    return oct(self.value)
 
-    #def __hex__(self):
+    # def __hex__(self):
     #    return hex(self.value)
 
     def __repr__(self):
-        return '<ByteVector value=%d vector=%s>' % (self.value, self.vector.encode('hex'))
+        return "<ByteVector value=%d vector=%s>" % (
+            self.value,
+            self.vector.encode("hex"),
+        )
 
     def __str__(self):
         return repr(self)
-        #return self.vector.encode('hex')
-
+        # return self.vector.encode('hex')
 
     # Misc
 
@@ -237,7 +234,6 @@ class ByteVector(object):
 
     def __hash__(self):
         return hash(self.value)
-
 
     # Comparison
 
@@ -248,9 +244,8 @@ class ByteVector(object):
             return cmp(self.vector, other)
         return cmp(self.value, other.value)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.value != 0
-
 
     # Array access
 
@@ -262,5 +257,3 @@ class ByteVector(object):
 
     def __iter__(self):
         return iter(self.vector)
-
-

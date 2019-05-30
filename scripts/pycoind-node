@@ -3,7 +3,8 @@
 import os
 
 import sys
-sys.path.append(os.path.join(os.path.split(__file__)[0], '..'))
+
+sys.path.append(os.path.join(os.path.split(__file__)[0], ".."))
 
 import argparse
 import json
@@ -14,46 +15,107 @@ import pycoind
 
 VersionString = ".".join(str(i) for i in pycoind.VERSION)
 
-Epilog = '''* Note: Stuff, stuff and more stuff.'''
+Epilog = """* Note: Stuff, stuff and more stuff."""
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        add_help = False,
-        description = "Node Management Tool",
-#        epilog = Epilog
+        add_help=False,
+        description="Node Management Tool",
+        #        epilog = Epilog
     )
 
+    group = parser.add_argument_group(title="Node Options")
+    group.add_argument(
+        "--coin",
+        metavar="COINNAME",
+        default="bitcoin",
+        help="specify coin (default: bitcoin)",
+    )
+    group.add_argument(
+        "--data-dir",
+        metavar="DIRECTORY",
+        help="database directory (default: ~/.pycoind/data)",
+    )
+    group.add_argument(
+        "--no-init",
+        action="store_true",
+        default=False,
+        help="do not create data-dir if missing",
+    )
+    group.add_argument(
+        "--background", action="store_true", help="run the node in the background"
+    )
 
-    group = parser.add_argument_group(title = "Node Options")
-    group.add_argument('--coin', metavar = "COINNAME", default = 'bitcoin', help = "specify coin (default: bitcoin)")
-    group.add_argument('--data-dir', metavar = "DIRECTORY", help = "database directory (default: ~/.pycoind/data)")
-    group.add_argument('--no-init', action = "store_true", default = False, help = "do not create data-dir if missing")
-    group.add_argument('--background', action = "store_true", help = "run the node in the background")
+    group = parser.add_argument_group(title="Network")
+    group.add_argument(
+        "--bind",
+        metavar="ADDRESS",
+        default="127.0.0.1",
+        help="Use specific interface (default: 127.0.0.1)",
+    )
+    group.add_argument(
+        "--port", type=int, help="port to connect on (default: coin specific)"
+    )
+    group.add_argument(
+        "--no-listen",
+        action="store_true",
+        default=False,
+        help="do not accept incoming connections",
+    )
 
-    group = parser.add_argument_group(title = "Network")
-    group.add_argument('--bind', metavar = "ADDRESS", default = "127.0.0.1", help = "Use specific interface (default: 127.0.0.1)")
-    group.add_argument('--port', type = int, help = "port to connect on (default: coin specific)")
-    group.add_argument('--no-listen', action = "store_true", default = False, help = "do not accept incoming connections")
+    group = parser.add_argument_group(title="Peer Discovery")
+    group.add_argument(
+        "--max-peers",
+        metavar="COUNT",
+        type=int,
+        default=125,
+        help="maximum connections to allow (default: 125)",
+    )
+    group.add_argument(
+        "--seek-peers",
+        metavar="COUNT",
+        type=int,
+        default=16,
+        help="number of peers to seek out (default: 16)",
+    )
+    group.add_argument(
+        "--connect",
+        nargs="+",
+        metavar="ADDRESS[:PORT]",
+        action="append",
+        help="specify peer addresses",
+    )
+    group.add_argument(
+        "--no-dns-lookup",
+        action="store_true",
+        default=False,
+        help="do not attempt to resolve DNS names for connect",
+    )
+    group.add_argument(
+        "--no-bootstrap",
+        action="store_true",
+        default=False,
+        help="do not use DNS seeds to bootstrap",
+    )
 
-    group = parser.add_argument_group(title = "Peer Discovery")
-    group.add_argument('--max-peers', metavar = "COUNT", type = int, default = 125, help = "maximum connections to allow (default: 125)")
-    group.add_argument('--seek-peers', metavar = "COUNT", type = int, default = 16, help = "number of peers to seek out (default: 16)")
-    group.add_argument('--connect', nargs = "+", metavar = "ADDRESS[:PORT]", action = "append", help = "specify peer addresses")
-    group.add_argument('--no-dns-lookup', action = "store_true", default = False, help = "do not attempt to resolve DNS names for connect")
-    group.add_argument('--no-bootstrap', action = "store_true", default = False, help = "do not use DNS seeds to bootstrap")
-
-    group = parser.add_argument_group(title = "Other Options")
-    group.add_argument('-h', '--help', action = "help", help = "show this help message and exit")
-    group.add_argument('--version', action='version', version='%(prog)s ' + VersionString)
-    group.add_argument('--debug', action = "store_true", default = False, help = "display debug logs")
+    group = parser.add_argument_group(title="Other Options")
+    group.add_argument(
+        "-h", "--help", action="help", help="show this help message and exit"
+    )
+    group.add_argument(
+        "--version", action="version", version="%(prog)s " + VersionString
+    )
+    group.add_argument(
+        "--debug", action="store_true", default=False, help="display debug logs"
+    )
 
     args = parser.parse_args()
 
     # get the coin by either name (eg. bitcoin) or symbol (eg. btc)
-    coin = pycoind.coins.get_coin(name = args.coin)
+    coin = pycoind.coins.get_coin(name=args.coin)
     if coin is None:
-        coin = pycoind.coins.get_coin(symbol = args.coin)
+        coin = pycoind.coins.get_coin(symbol=args.coin)
     if coin is None:
         parser.error("Unknown coin - %r" % args.coin)
 
@@ -84,14 +146,14 @@ if __name__ == '__main__':
     max_peers = args.max_peers
 
     bootstrap = not args.no_bootstrap
-    #only_manual = args.only_manual
+    # only_manual = args.only_manual
 
     connect = []
     if args.connect is not None:
         for addresses in args.connect:
             for addr in addresses:
-                if addr.find(':') >= 0:
-                    (ip, p) = addr.split(':')
+                if addr.find(":") >= 0:
+                    (ip, p) = addr.split(":")
                     p = int(p)
                 else:
                     ip = addr
@@ -109,35 +171,35 @@ if __name__ == '__main__':
         try:
             if os.fork():
                 sys.exit(0)
-        except OSError, e:
-            parser.error('failed to background (%s)' % e)
+        except OSError as e:
+            parser.error("failed to background (%s)" % e)
 
         # give up any hold on the PWD that would prevent unmounting/deleting
-        if os.sep == '/':
-            os.chdir('/')
+        if os.sep == "/":
+            os.chdir("/")
         else:
-            os.chdir('C:\\')   # @TODO: is this good enough?
+            os.chdir("C:\\")  # @TODO: is this good enough?
 
         # create a new session so we can relinquish session leader
         try:
             os.setsid()
-        except Exception, e:
+        except Exception as e:
             pass
 
         # fork twice and kill the parent; the child is free
         try:
             if os.fork():
                 sys.exit(0)
-        except OSError, e:
-            parser.error('failed to background (%s)' % e)
+        except OSError as e:
+            parser.error("failed to background (%s)" % e)
 
     node = pycoind.node.Node(
-        data_dir = data_dir,
-        address = address,
-        seek_peers = seek_peers,
-        max_peers = max_peers,
-        bootstrap = bootstrap,
-        coin = coin,
+        data_dir=data_dir,
+        address=address,
+        seek_peers=seek_peers,
+        max_peers=max_peers,
+        bootstrap=bootstrap,
+        coin=coin,
     )
 
     if args.debug:
@@ -146,9 +208,8 @@ if __name__ == '__main__':
     for address in connect:
         node.add_peer(address)
 
-
     # start the node event loop
     node.serve_forever()
 
-    #import cProfile
-    #cProfile.run('node.serve_forever()')
+    # import cProfile
+    # cProfile.run('node.serve_forever()')

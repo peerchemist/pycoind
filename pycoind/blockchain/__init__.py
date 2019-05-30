@@ -32,14 +32,13 @@ from .. import coins
 from .. import script
 from .. import util
 
-__all__ = ['BlockChain']
+__all__ = ["BlockChain"]
 
 _0 = chr(0) * 32
 
 
 class BlockChain(object):
-
-    def __init__(self, data_dir = None, coin = coins.Bitcoin):
+    def __init__(self, data_dir=None, coin=coins.Bitcoin):
         if data_dir is None:
             data_dir = util.default_data_directory()
         self._data_dir = data_dir
@@ -48,34 +47,30 @@ class BlockChain(object):
         # a block database also holds a reference to a transaction database
         self._blocks = block.Database(data_dir, coin)
 
-        self._unspent = unspent.Database(data_dir, coin, processes = 1)
+        self._unspent = unspent.Database(data_dir, coin, processes=1)
 
     data_dir = property(lambda s: s._data_dir)
     coin = property(lambda s: s._coin)
 
-
     def get_block(self, blockhash):
-        'Return a block by its blockhash.'
+        "Return a block by its blockhash."
 
         return self._blocks.get(blockhash)
 
-
     def get_transaction(self, txid):
-        'Return a transaction by its txid.'
+        "Return a transaction by its txid."
 
         return self._blocks._txns.get(txid)
 
-
     def get_transaction_block(self, transaction):
-        'Return the block for a transaction.'
+        "Return the block for a transaction."
 
         return self._blocks._get(transaction._blockid)
 
-
     def get_unspent_outputs(self, address):
-        'Return the list of unspent transaction outputs (utxo) for an address.'
+        "Return the list of unspent transaction outputs (utxo) for an address."
 
-        raise NotImplementedError('coming soon...')
+        raise NotImplementedError("coming soon...")
 
         outputs = []
         for uock in self._unspent._list_unspent(address):
@@ -93,14 +88,12 @@ class BlockChain(object):
 
         return outputs
 
-
     def get_balance(self, address):
-        'Return the current balance for an address.'
+        "Return the current balance for an address."
 
-        raise NotImplementedError('coming soon...')
+        raise NotImplementedError("coming soon...")
 
         return sum(o.value for o in self.get_unspent_outputs(address)) / 100000000.0
-
 
     def __getitem__(self, name):
         return self._blocks[name]
@@ -111,4 +104,3 @@ class BlockChain(object):
     def __iter__(self):
         for block in self._blocks:
             yield block
-

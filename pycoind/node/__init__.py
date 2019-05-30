@@ -21,10 +21,7 @@
 # THE SOFTWARE.
 
 
-__all__ = [
-    'BaseNode', 'Node',
-    'AddressInUseException'
-]
+__all__ = ["BaseNode", "Node", "AddressInUseException"]
 
 
 from .basenode import AddressInUseException, BaseNode

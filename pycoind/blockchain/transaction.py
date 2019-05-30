@@ -77,26 +77,26 @@ from .. import protocol
 from .. import script
 from .. import util
 
-__all__ = ['Database']
+__all__ = ["Database"]
 
 
 def get_q(txid):
-    'Compute the index q from a txid.'
+    "Compute the index q from a txid."
 
-    return struct.unpack('>I', txid[:4])[0]
+    return struct.unpack(">I", txid[:4])[0]
 
 
-_KEY_DUP = 'PRIMARY KEY must be unique'
+_KEY_DUP = "PRIMARY KEY must be unique"
 
 _0 = chr(0) * 32
 
-class Transaction(object):
 
-    def __init__(self, database, row, _transaction = None):
+class Transaction(object):
+    def __init__(self, database, row, _transaction=None):
         keys = [n for (n, t, i) in database.Columns]
 
         self._database = database
-        self._data = dict(zip(keys, row))
+        self._data = dict(list(zip(keys, row)))
 
         # cache for previous outputs' transactions, since it hits the database
         self._po_cache = dict()
@@ -115,7 +115,10 @@ class Transaction(object):
     index = property(lambda s: keys.get_txck_index(s._txck))
 
     def __getstate__(self):
-        return (self._po_cache, dict(txn = str(self._data['txn']), txck = self._data['txck']))
+        return (
+            self._po_cache,
+            dict(txn=str(self._data["txn"]), txck=self._data["txck"]),
+        )
 
     def __setstate__(self, state):
         self._database = None
@@ -125,7 +128,7 @@ class Transaction(object):
         self._transaction = None
 
     def cache_previous_outputs(self):
-        for i in xrange(0, len(self.inputs)):
+        for i in range(0, len(self.inputs)):
             self.previous_transaction(i)
 
     def previous_transaction(self, index):
@@ -141,7 +144,7 @@ class Transaction(object):
 
             previous_txn = self._database.get(po_hash)
             if previous_txn is None:
-                raise KeyError('missing transaction: %s' % po_hash)
+                raise KeyError("missing transaction: %s" % po_hash)
 
             self._po_cache[index] = previous_txn
 
@@ -149,55 +152,57 @@ class Transaction(object):
         return self._po_cache[index]
 
     def previous_output(self, index):
-        'Returns the previous output for the input at index.'
+        "Returns the previous output for the input at index."
 
         previous_txn = self.previous_transaction(index)
-        if previous_txn is None: return None
+        if previous_txn is None:
+            return None
 
         po = self.inputs[index].previous_output
         return previous_txn.outputs[po.index]
 
     def __str__(self):
-        return "<Transaction hash=0x%s>" % self.hash.encode('hex')
+        return "<Transaction hash=0x%s>" % self.hash.encode("hex")
 
     # transaction composite key and database block id; internal use
-    _txck = property(lambda s: s._data['txck'])
+    _txck = property(lambda s: s._data["txck"])
     _blockid = property(lambda s: keys.get_txck_blockid(s._txck))
 
     def _previous_uock(self, index):
 
         previous_txn = self.previous_transaction(index)
-        if previous_txn is None: return None
+        if previous_txn is None:
+            return None
 
         po = self.inputs[index].previous_output
         return keys.get_uock(previous_txn._txck, po.index)
 
     @property
     def txn(self):
-        'The raw transaction object.'
+        "The raw transaction object."
 
         if self._transaction is None:
             (vl, self._transaction) = protocol.Txn.parse(self.txn_binary)
         return self._transaction
 
-    txn_binary = property(lambda s: str(s._data['txn']))
+    txn_binary = property(lambda s: str(s._data["txn"]))
 
 
 class Database(database.Database):
 
     MINIMUM_N = 4
 
-    TARGET_SIZE = (1 << 30) * 7 // 4     # 1.75GB
+    TARGET_SIZE = (1 << 30) * 7 // 4  # 1.75GB
 
     Columns = [
-        ('txck', 'integer primary key', False),
-        ('txid_hint', 'integer', True),
-        ('txn', 'blob', False),
+        ("txck", "integer primary key", False),
+        ("txid_hint", "integer", True),
+        ("txn", "blob", False),
     ]
 
-    Name = 'txns'
+    Name = "txns"
 
-    def __init__(self, data_dir = None, coin = coins.Bitcoin):
+    def __init__(self, data_dir=None, coin=coins.Bitcoin):
         database.Database.__init__(self, data_dir, coin)
 
         # maps (n, i % n) tuples to sqlite connection
@@ -212,10 +217,10 @@ class Database(database.Database):
             self.get_connection(n, 0, True)
             n //= 2
 
-        #self._unspent = unspent.Database(self.data_dir, coin)
+        # self._unspent = unspent.Database(self.data_dir, coin)
 
     def load_n(self):
-        'Determine the highest N for a database directory.'
+        "Determine the highest N for a database directory."
 
         n = self.MINIMUM_N
         while True:
@@ -224,28 +229,27 @@ class Database(database.Database):
             n *= 2
         return n
 
-
     def get_suffix(self, n, q):
-        return '-%03d-%03d' % (n, q % n)
+        return "-%03d-%03d" % (n, q % n)
 
-
-    def get_connection(self, n, q, allow_create = False):
-        '''Get a connection for the database file at (n, q % n). First a
+    def get_connection(self, n, q, allow_create=False):
+        """Get a connection for the database file at (n, q % n). First a
            connection cache is searched. Then the disk is checked for new
            files, in which case every file at level n is loaded.
 
            If allow_create and the database file does not exist, all
-           partitions at the level n are created.'''
+           partitions at the level n are created."""
 
         # the location we want
         loc = (n, q % n)
         if loc not in self._connections:
 
-            locs = [(n, i) for i in xrange(0, n)]
+            locs = [(n, i) for i in range(0, n)]
 
             # doesn't exist; create the files backward
             if not os.path.isfile(self.get_filename(self.get_suffix(n, 0))):
-                if not allow_create: return None
+                if not allow_create:
+                    return None
                 locs.reverse()
 
             for l in locs:
@@ -254,9 +258,8 @@ class Database(database.Database):
 
         return self._connections[loc]
 
-
     def check_size(self):
-        'Checks the sizes of the database level, increasing the size as needed.'
+        "Checks the sizes of the database level, increasing the size as needed."
 
         # if any (statistically selected) database is full, increase our size
         suffix = self.get_suffix(self._N, random.randint(0, self._N - 1))
@@ -265,9 +268,8 @@ class Database(database.Database):
             self._N *= 2
             self.get_connection(self._N, 0, True)
 
-
     def add(self, block, transactions):
-        'Add transactions to the database.'
+        "Add transactions to the database."
 
         # expand the database if necessary
         self.check_size()
@@ -277,7 +279,7 @@ class Database(database.Database):
 
         # for each transaction...
         connections = dict()
-        block_txns = [ ]
+        block_txns = []
         for (txn_index, txn) in enumerate(transactions):
 
             # ...get the database to save to
@@ -294,7 +296,7 @@ class Database(database.Database):
                 cursor.execute(self.sql_insert, row)
 
             # (duplicates don't matter)
-            except sqlite3.IntegrityError, e:
+            except sqlite3.IntegrityError as e:
                 if e.message != _KEY_DUP:
                     raise e
 
@@ -302,7 +304,7 @@ class Database(database.Database):
             block_txns.append(Transaction(self, row, txn))
 
         # commit the transactions to the databases
-        for connection in connections.values():
+        for connection in list(connections.values()):
             connection.commit()
 
         # update the block with the transactions
@@ -313,11 +315,11 @@ class Database(database.Database):
 
     # @TODO optimization: store in each txn db a max_blockid so we can prune
     def _get(self, txck):
-        ''
+        ""
 
-        for connection in self._connections.values():
+        for connection in list(self._connections.values()):
             cursor = connection.cursor()
-            cursor.execute(self.sql_select + ' where txck = ?', (txck, ))
+            cursor.execute(self.sql_select + " where txck = ?", (txck,))
             row = cursor.fetchone()
             if row:
                 return Transaction(self, row)
@@ -332,10 +334,10 @@ class Database(database.Database):
         hi = keys.get_txck(blockid + 1, 0)
 
         # find all transactions across all databases within this range
-        txns = [ ]
-        for connection in self._connections.values():
+        txns = []
+        for connection in list(self._connections.values()):
             cursor = connection.cursor()
-            cursor.execute(self.sql_select + ' where txck >= ? and txck < ?', (lo, hi))
+            cursor.execute(self.sql_select + " where txck >= ? and txck < ?", (lo, hi))
             txns.extend((r[0], r) for r in cursor.fetchall())
 
         # sort by index (actually (blockid, index), but all have same blockid)
@@ -344,9 +346,8 @@ class Database(database.Database):
         # wrap it up in a helpful wrapper
         return [Transaction(self, row) for (txck, row) in txns]
 
-
-    def get(self, txid, default = None):
-        'Get a transaction by its txid.'
+    def get(self, txid, default=None):
+        "Get a transaction by its txid."
 
         # the hint we index by for faster lookup
         txid_hint = keys.get_hint(txid)
@@ -358,7 +359,7 @@ class Database(database.Database):
             connection = self.get_connection(n, q)
 
             cursor = connection.cursor()
-            cursor.execute(self.sql_select + ' where txid_hint = ?', (txid_hint, ))
+            cursor.execute(self.sql_select + " where txid_hint = ?", (txid_hint,))
             for row in cursor.fetchall():
                 (vl, txn) = protocol.Txn.parse(row[2])
                 if txn.hash == txid:
@@ -374,8 +375,7 @@ class Database(database.Database):
 
         return default
 
-
-    #def __getitem__(self, name):
+    # def __getitem__(self, name):
     #    'Get a transaction by its txid.'
     #
     #    txn = self.get(name)
@@ -384,7 +384,7 @@ class Database(database.Database):
     #    raise KeyError(name)
 
     # Useful? Should it return a blockhain.transaction.Transaction or protocol.Txn?
-    #def __iter__(self):
+    # def __iter__(self):
     #    'Iterate over every transaction. There is no meaningful order.'
     #
     #    for connection in self._connections.values():

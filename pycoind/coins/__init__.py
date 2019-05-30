@@ -21,23 +21,31 @@
 # THE SOFTWARE.
 
 
-from bitcoin import Bitcoin
+from .bitcoin import Bitcoin
 from coinyecoin import Coinyecoin
-from dogecoin import Dogecoin
+from .dogecoin import Dogecoin
 from feathercoin import Feathercoin
 from flappycoin import Flappycoin
-from litecoin import Litecoin
+from .litecoin import Litecoin
 from mooncoin import Mooncoin
 from potcoin import Potcoin
 from zetacoin import Zetacoin
 
-from coin import satoshi_per_coin
+from .coin import satoshi_per_coin
 
 __all__ = [
-    'Bitcoin', 'Coinyecoin', 'Dogecoin', 'Feathercoin', 'Flappycoin',
-    'Litecoin', 'Mooncoin', 'Potcoin', 'Zetacoin',
-    'Coins', 'get_coin',
-    'satoshi_per_coin'
+    "Bitcoin",
+    "Coinyecoin",
+    "Dogecoin",
+    "Feathercoin",
+    "Flappycoin",
+    "Litecoin",
+    "Mooncoin",
+    "Potcoin",
+    "Zetacoin",
+    "Coins",
+    "get_coin",
+    "satoshi_per_coin",
 ]
 
 Coins = [
@@ -53,10 +61,12 @@ Coins = [
 ]
 
 
-def get_coin(name = None, symbol = None):
+def get_coin(name=None, symbol=None):
 
-    if name is None: name = ''
-    if symbol is None: symbol = ''
+    if name is None:
+        name = ""
+    if symbol is None:
+        symbol = ""
 
     for coin in Coins:
         if name and name.lower() == coin.name or symbol.upper() in coin.symbols:

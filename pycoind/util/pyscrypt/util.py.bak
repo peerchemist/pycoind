@@ -21,11 +21,16 @@
 # THE SOFTWARE.
 
 
-from . import opcodes
+def array_overwrite(source, source_start, dest, dest_start, length):
+    '''Overwrites the dest array with the source array.'''
 
-from .bytevector import ByteVector
-from .script import Script, Tokenizer
+    for i in xrange(0, length):
+        dest[dest_start + i] = source[source_start + i]
 
-from .script import TEMPLATE_PAY_TO_PUBKEY, TEMPLATE_PAY_TO_PUBKEY_HASH
 
-__all__ = ["ByteVector", "opcodes", "Script", "Tokenizer"]
+def block_xor(source, source_start, dest, dest_start, length):
+    '''Performs xor on arrays source and dest, storing the result back in dest.'''
+
+    for i in xrange(0, length):
+        dest[dest_start + i] = chr(ord(dest[dest_start + i]) ^ ord(source[source_start + i]))
+

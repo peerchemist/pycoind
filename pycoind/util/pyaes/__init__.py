@@ -48,5 +48,14 @@
 
 VERSION = [1, 1, 0]
 
-from .aes import AES, AESModeOfOperationCTR, AESModeOfOperationCBC, AESModeOfOperationCFB, AESModeOfOperationECB, AESModeOfOperationOFB, AESModesOfOperation, Counter
+from .aes import (
+    AES,
+    AESModeOfOperationCTR,
+    AESModeOfOperationCBC,
+    AESModeOfOperationCFB,
+    AESModeOfOperationECB,
+    AESModeOfOperationOFB,
+    AESModesOfOperation,
+    Counter,
+)
 from .blockfeeder import Decrypter, Encrypter

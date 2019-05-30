@@ -26,7 +26,8 @@
 raise NotImplemented()
 
 
-import coin
+from . import coin
+
 
 class ___coin(coin.Coin):
 
@@ -39,15 +40,13 @@ class ___coin(coin.Coin):
 
     # See: https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery
     # Usually in chainparams.cpp or net.cpp
-    dns_seeds = [
-        ("___", ___),
-    ]
+    dns_seeds = [("___", ___)]
 
     # This function returns the block creation fee based on a block
     # Usually the chainparams.cpp or main.cpp has a method GetBlockValue
     # or uses a subsidy block halving interval
-    #@staticmethod
-    #def block_creation_fee(block):
+    # @staticmethod
+    # def block_creation_fee(block):
     #     return (50 * 100000000) >> (block.height // 210000)
 
     # The default port this coin listens on; should not be on an otherwise
@@ -57,11 +56,11 @@ class ___coin(coin.Coin):
 
     # Genesis block (hashes are little endiand; ie. 0's should be at the end)
     # @TODO: create a utility function to generate new genesis blocks
-    genesis_version = ___                       # if ommitted, default is 1
-    genesis_block_hash = '___'.decode('hex')
-    genesis_merkle_root = '___'.decode('hex')
+    genesis_version = ___  # if ommitted, default is 1
+    genesis_block_hash = "___".decode("hex")
+    genesis_merkle_root = "___".decode("hex")
     genesis_timestamp = ___
-    genesis_bits = ___                           # if ommitted, default is
+    genesis_bits = ___  # if ommitted, default is
     genesis_nonce = ___
 
     # The magic number should be 4-bytes, such that it represents a
@@ -77,7 +76,6 @@ class ___coin(coin.Coin):
 
     # This public key will be used to verify alerts; you can use the
     # pycoind.wallet.Address to generate a public/private key pair
-    alert_public_key = '___'.decode('hex')
-
+    alert_public_key = "___".decode("hex")
 
     block_height_guess = []

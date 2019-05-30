@@ -58,17 +58,18 @@ from .. import coins
 from .. import script
 from .. import util
 
-__all__ = ['Database']
+__all__ = ["Database"]
 
 
 KEY_LAST_VALID_BLOCK = 2
 
 
-_KEY_DUP = 'PRIMARY KEY must be unique'
+_KEY_DUP = "PRIMARY KEY must be unique"
 _0 = chr(0) * 32
 
 
-class InvalidTransactionException(Exception): pass
+class InvalidTransactionException(Exception):
+    pass
 
 
 def init_worker():
@@ -90,47 +91,52 @@ def verify(transaction):
         # do the inputs afford the outputs? (coinbase is an exception)
         fees = 0
         if transaction.index != 0:
-            sum_in = sum(po_value(transaction, i) for i in xrange(0, len(transaction.inputs)))
+            sum_in = sum(
+                po_value(transaction, i) for i in range(0, len(transaction.inputs))
+            )
             sum_out = sum(o.value for o in transaction.outputs)
             fees = sum_in - sum_out
             if fees < 0:
-                print sum_in, sum_out
-                print "FAIL(sum_in < sum_out)", transaction
+                print(sum_in, sum_out)
+                print("FAIL(sum_in < sum_out)", transaction)
                 return (False, [], 0)
 
         # are all inputs valid against their previous output?
         txio = script.Script(transaction)
         valid = txio.verify()
-        addresses = [txio.output_address(o) for o in xrange(0, txio.output_count)]
+        addresses = [txio.output_address(o) for o in range(0, txio.output_count)]
 
         if not valid:
-            print transaction
+            print(transaction)
 
         return (valid, addresses, fees)
-    except Exception, e:
-        print transaction, e
+    except Exception as e:
+        print(transaction, e)
         import traceback
+
         traceback.print_exc()
         raise e
 
 
 class Database(database.Database):
     Columns = [
-        ('uock', 'integer primary key', False),
-        ('address_hint', 'integer', True),
+        ("uock", "integer primary key", False),
+        ("address_hint", "integer", True),
     ]
-    Name = 'unspent'
+    Name = "unspent"
 
-    def __init__(self, data_dir, coin = coins.Bitcoin, processes = None):
+    def __init__(self, data_dir, coin=coins.Bitcoin, processes=None):
         database.Database.__init__(self, data_dir, coin)
 
-        self.sql_delete = 'delete from unspent where uock = ?'
+        self.sql_delete = "delete from unspent where uock = ?"
 
         self._connection = self.get_connection()
 
         if processes is None or processes != 1:
-            self._pool = multiprocessing.Pool(processes = processes, initializer = init_worker)
-            print "Spawning %d processes" % self._pool._processes
+            self._pool = multiprocessing.Pool(
+                processes=processes, initializer=init_worker
+            )
+            print("Spawning %d processes" % self._pool._processes)
         else:
             self._pool = None
 
@@ -143,11 +149,11 @@ class Database(database.Database):
         return self.get_metadata(cursor, KEY_LAST_VALID_BLOCK)
 
     def _todo_rollback(self, block):
-        'Undo all unspent transactions for a block. Must be the latest valid block.'
+        "Undo all unspent transactions for a block. Must be the latest valid block."
 
         # this would break our data model (but shouldn't be possible anyways)
         if block._blockid <= 1:
-            raise ValueError('cannot remove pre-genesis block')
+            raise ValueError("cannot remove pre-genesis block")
 
         # get the base uock for this block (ie. txn_index == output_index == 0)
         txck = keys.get_txck(block._blockid, 0)
@@ -155,12 +161,12 @@ class Database(database.Database):
 
         # begin a transaction, locking out other updates
         cursor = self._connection.cursor()
-        cursor.execute('begin immediate transaction')
+        cursor.execute("begin immediate transaction")
 
         # make sure we are removing a block we have already added
         last_valid_block = self.get_metadata(cursor, KEY_LAST_VALID_BLOCK)
         if last_valid_block != block._blockid:
-            raise ValueError('can only rollback last valid block')
+            raise ValueError("can only rollback last valid block")
 
         # remove all outputs
         raise NotImplemented()
@@ -173,10 +179,9 @@ class Database(database.Database):
 
         self._connection.commit()
 
-
     def update(self, block):
-        '''Updates the unspent transaction output (utxo) database with the
-           transactions from a block.'''
+        """Updates the unspent transaction output (utxo) database with the
+           transactions from a block."""
 
         t0 = time.time()
 
@@ -187,7 +192,7 @@ class Database(database.Database):
         t1 = time.time()
 
         if self._pool is None:
-            results = map(verify, txns)
+            results = list(map(verify, txns))
         else:
             results = self._pool.map(verify, txns)
 
@@ -196,7 +201,7 @@ class Database(database.Database):
         fees += self.coin.block_creation_fee(block)
         sum_out = sum(o.value for o in txns[0].outputs)
         if fees < sum_out:
-            raise InvalidTransactionException('invalid coinbase fee')
+            raise InvalidTransactionException("invalid coinbase fee")
 
         t2 = time.time()
 
@@ -205,52 +210,55 @@ class Database(database.Database):
 
         t3 = time.time()
 
-        print "Processed %d transaction (cache=%fs, compute=%fs, update=%fs)" % (len(txns), t1 - t0, t2 - t1, t3 - t2)
-
+        print(
+            "Processed %d transaction (cache=%fs, compute=%fs, update=%fs)"
+            % (len(txns), t1 - t0, t2 - t1, t3 - t2)
+        )
 
     def _update(self, block, results):
 
         # lock the database
         cursor = self._connection.cursor()
-        cursor.execute('begin immediate transaction')
+        cursor.execute("begin immediate transaction")
 
         # make sure we are adding the next block (haven't skipped any)
         last_valid_block = self.get_metadata(cursor, KEY_LAST_VALID_BLOCK)
         if last_valid_block != block._previous_blockid:
-            raise InvalidTransactionException('must add consequetive block')
+            raise InvalidTransactionException("must add consequetive block")
 
         for (txn, valid, addresses) in results:
 
             # invalid transaction
             if not valid:
-                raise InvalidTransactionException('temporary')
-                print "invalid", txn
+                raise InvalidTransactionException("temporary")
+                print("invalid", txn)
                 continue
 
             # remove each input's previous outputs
-            for i in xrange(0, len(txn.inputs)):
+            for i in range(0, len(txn.inputs)):
                 uock = txn._previous_uock(i)
-                if uock is None: continue
+                if uock is None:
+                    continue
 
                 txck = keys.get_uock_txck(uock)
-                #print '-', keys.get_txck_blockid(txck), keys.get_txck_index(txck), keys.get_uock_index(uock), txn.previous_output(i).value
+                # print '-', keys.get_txck_blockid(txck), keys.get_txck_index(txck), keys.get_uock_index(uock), txn.previous_output(i).value
 
-                cursor.execute(self.sql_delete, (uock, ))
+                cursor.execute(self.sql_delete, (uock,))
                 if cursor.rowcount != 1:
-                    raise Exception('bad state: failed to delete a utxo')
+                    raise Exception("bad state: failed to delete a utxo")
 
             # add new outputs (with a hint of the address)
             for (o, address) in enumerate(addresses):
                 uock = keys.get_uock(txn._txck, o)
 
-                #print '+', keys.get_txck_blockid(txn._txck), keys.get_txck_index(txn._txck), o, txn.outputs[o].value
+                # print '+', keys.get_txck_blockid(txn._txck), keys.get_txck_index(txn._txck), o, txn.outputs[o].value
 
                 address_hint = keys.get_address_hint(address)
                 try:
                     cursor.execute(self.sql_insert, (uock, address_hint))
 
                 # (duplicates don't matter)
-                except sqlite3.IntegrityError, e:
+                except sqlite3.IntegrityError as e:
                     if e.message != _KEY_DUP:
                         raise e
 
@@ -259,15 +267,15 @@ class Database(database.Database):
 
         self._connection.commit()
 
-
-
     def _list_unspent(self, address):
         address_hint = keys.get_address_hint(address)
         cursor = self._connection.cursor()
-        cursor.execute('select uock from unspent where address_hint = ?', (address_hint, ))
+        cursor.execute(
+            "select uock from unspent where address_hint = ?", (address_hint,)
+        )
 
         return [r[0] for r in cursor.fetchall()]
-        #for row in cursor.fetchall():
+        # for row in cursor.fetchall():
         #    uock = row[0]
         #    txck = keys.get_uock_txck(uock)
         #    output_index = keys.get_uock_index(uock)
@@ -276,4 +284,4 @@ class Database(database.Database):
         #    txn = self._txndb._get_transactions(blockid)[txn_index]
         #    outputs.append(txn.tx_out[output_index])
 
-        #return outputs
+        # return outputs

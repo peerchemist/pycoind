@@ -6,3 +6,4 @@ MANIFEST
 build/*
 dist/*
 obsolete/*
+.mypy_cache

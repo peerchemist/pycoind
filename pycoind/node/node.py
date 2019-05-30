@@ -31,6 +31,7 @@ from .. import blockchain
 from .. import coins
 from .. import protocol
 
+
 class Node(BaseNode):
 
     # maximum number of pending getdata requests for a peer to have in-flight
@@ -45,8 +46,19 @@ class Node(BaseNode):
     # maximum number of entries in the memory pool
     MEMORY_POOL_SIZE = 30000
 
-    def __init__(self, data_dir = None, address = None, seek_peers = 16, max_peers = 125, bootstrap = True, log = sys.stdout, coin = coins.Bitcoin):
-        BaseNode.__init__(self, data_dir, address, seek_peers, max_peers, bootstrap, log, coin)
+    def __init__(
+        self,
+        data_dir=None,
+        address=None,
+        seek_peers=16,
+        max_peers=125,
+        bootstrap=True,
+        log=sys.stdout,
+        coin=coins.Bitcoin,
+    ):
+        BaseNode.__init__(
+            self, data_dir, address, seek_peers, max_peers, bootstrap, log, coin
+        )
 
         # blockchain database
         self._blocks = blockchain.block.Database(self.data_dir, self._coin)
@@ -70,11 +82,9 @@ class Node(BaseNode):
         # last time headers were requested from a peer
         self._inflight_headers = dict()
 
-
     @property
     def blockchain_height(self):
         return self._blocks[-1].height
-
 
     def _prime_mempool(self):
         # @TODO: on start-up pull in last couple of blocks' transactions
@@ -88,21 +98,23 @@ class Node(BaseNode):
             self._mempool.append(txn)
 
     def _search_mempool(self, txid):
-         txns = [t for t in self._mempool if t.hash == txid]
-         if txns:
-             return txns[0]
-         return None
+        txns = [t for t in self._mempool if t.hash == txid]
+        if txns:
+            return txns[0]
+        return None
 
-
-    def command_block(self, peer, version, prev_block, merkle_root, timestamp, bits, nonce, txns):
+    def command_block(
+        self, peer, version, prev_block, merkle_root, timestamp, bits, nonce, txns
+    ):
 
         try:
             # get the block
-            header = protocol.BlockHeader(version, prev_block, merkle_root,
-                                          timestamp, bits, nonce, 0)
+            header = protocol.BlockHeader(
+                version, prev_block, merkle_root, timestamp, bits, nonce, 0
+            )
             block = self._blocks.get(header.hash)
             if not block:
-                raise blockchain.block.InvalidBlockException('block header not found')
+                raise blockchain.block.InvalidBlockException("block header not found")
 
             # add the transactions
             self._txns.add(block, txns)
@@ -115,8 +127,12 @@ class Node(BaseNode):
             if block.hash in self._incomplete_blocks:
                 del self._incomplete_blocks[block.hash]
 
-        except blockchain.block.InvalidBlockException, e:
-            self.log('invalid block header: %s (%s)' % (header.hash.encode('hex'), e.message), level = self.LOG_LEVEL_DEBUG)
+        except blockchain.block.InvalidBlockException as e:
+            self.log(
+                "invalid block header: %s (%s)"
+                % (header.hash.encode("hex"), e.message),
+                level=self.LOG_LEVEL_DEBUG,
+            )
             self.punish_peer(peer, str(e))
 
         # give the peer more room to request blocks
@@ -125,24 +141,25 @@ class Node(BaseNode):
             if self._inflight_blocks[peer] < 0:
                 self._inflight_blocks[peer] = 0
 
-
     def command_get_blocks(self, peer, version, block_locator_hashes, hash_stop):
         blocks = self._blocks.locate_blocks(block_locator_hashes, 500, hash_stop)
 
         # we found their place on the blockchain
         if blocks:
-            inv = [protocol.InventoryVector(protocol.OBJECT_TYPE_MSG_BLOCK, b.hash) for b in blocks]
+            inv = [
+                protocol.InventoryVector(protocol.OBJECT_TYPE_MSG_BLOCK, b.hash)
+                for b in blocks
+            ]
             self.send_message(protocol.Inventory(inv))
 
         # we didn't find anything that matched their locator... What to do? not_found?
         else:
             self.send_message(protocol.NotFound(block_locator_hashes))
 
-
     def command_get_data(self, peer, inventory):
 
         # look up each block and transaction requested
-        notfound = [ ]
+        notfound = []
         for iv in inventory:
 
             if iv.type == protocol.OBJECT_TYPE_MSG_BLOCK:
@@ -162,7 +179,8 @@ class Node(BaseNode):
                 txn = self._search_mempool(iv.hash)
                 if not txn:
                     tx = self._txns.get(iv.hash)
-                    if tx: txn = tx.txn
+                    if tx:
+                        txn = tx.txn
 
                 # if we found one, return it
                 if txn:
@@ -174,12 +192,12 @@ class Node(BaseNode):
         if notfound:
             peer.send_message(protocol.NotFound(notfound))
 
-
     def command_get_headers(self, peer, version, block_locator_hashes, hash_stop):
         # Send the list of headers
         blocks = self._blocks.locate_blocks(block_locator_hashes, 2000, hash_stop)
-        peer.send_message(protocol.Headers([protocol.BlockHeader.from_block(b) for b in blocks]))
-
+        peer.send_message(
+            protocol.Headers([protocol.BlockHeader.from_block(b) for b in blocks])
+        )
 
     def command_headers(self, peer, headers):
 
@@ -188,7 +206,8 @@ class Node(BaseNode):
             del self._inflight_headers[peer]
 
         # nothing to do
-        if len(headers) == 0: return
+        if len(headers) == 0:
+            return
 
         # Add the headers to the database (we fill in the transactions later)
         new_headers = False
@@ -198,44 +217,52 @@ class Node(BaseNode):
                 if added:
                     new_headers = True
                 else:
-                    self.log('block header already exists: %s' % header.hash.encode('hex'), level = self.LOG_LEVEL_DEBUG)
-            except blockchain.block.InvalidBlockException, e:
-                self.log('invalid block header: %s (%s)' % (header.hash.encode('hex'), e.message), level = self.LOG_LEVEL_DEBUG)
+                    self.log(
+                        "block header already exists: %s" % header.hash.encode("hex"),
+                        level=self.LOG_LEVEL_DEBUG,
+                    )
+            except blockchain.block.InvalidBlockException as e:
+                self.log(
+                    "invalid block header: %s (%s)"
+                    % (header.hash.encode("hex"), e.message),
+                    level=self.LOG_LEVEL_DEBUG,
+                )
                 self.punish_peer(peer, str(e))
 
-
         # we got some headers, so we can request the next batch now
-        self.sync_blockchain_headers(new_headers = new_headers)
-
+        self.sync_blockchain_headers(new_headers=new_headers)
 
     def command_inventory(self, peer, inventory):
         pass
 
         # look for new blocks being advertised by peers
-        #def useful_block(iv):
+        # def useful_block(iv):
         #    if iv.object_type != protocol.OBJECT_TYPE_MSG_BLOCK:
         #        return False
         #    if self._blockchain.get(iv.hash):
         #        return False
         #    return True
 
-        #block_inventory = [iv for iv in inventory if useful_block(iv)]
+        # block_inventory = [iv for iv in inventory if useful_block(iv)]
 
-        # @TODO: 
+        # @TODO:
         # new block
-        #if block_inventory:
+        # if block_inventory:
         #    peer.send_message(protocol.GetData(block_inventory))
 
-
     def command_memory_pool(self, peer):
-        inv = [protocol.InventoryVector(protocol.OBJECT_TYPE_MSG_TX, t.hash) for t in self._mempool]
+        inv = [
+            protocol.InventoryVector(protocol.OBJECT_TYPE_MSG_TX, t.hash)
+            for t in self._mempool
+        ]
         per.send_message(inv)
-
 
     def command_not_found(self, peer, inventory):
 
         # the peer did not have the blocks we were looking for, so we can send more
-        block_count = len(b for b in inventory if b.object_type == protocol.OBJECT_TYPE_MSG_BLOCK)
+        block_count = len(
+            b for b in inventory if b.object_type == protocol.OBJECT_TYPE_MSG_BLOCK
+        )
         if peer in self._inflight_blocks:
             self._inflight_blocks[peer] -= block_count
             if self._inflight_blocks[peer] < 0:
@@ -249,7 +276,7 @@ class Node(BaseNode):
         self.sync_blockchain_blocks()
 
     def disconnected(self, peer):
-        'Called by a peer after it has been closed.'
+        "Called by a peer after it has been closed."
 
         BaseNode.disconnected(self, peer)
 
@@ -268,7 +295,7 @@ class Node(BaseNode):
         self._blocks.close()
         BaseNode.close(self)
 
-    def sync_blockchain_headers(self, new_headers = False):
+    def sync_blockchain_headers(self, new_headers=False):
 
         # give getheaders at least 30 seconds to respond (new_headers means
         # it already did and we are ready to ask for more)
@@ -281,28 +308,36 @@ class Node(BaseNode):
         for peer in list(self._inflight_headers):
             if now - self._inflight_headers[peer] > 900:
                 del self._inflight_headers[peer]
-                self.punish_peer(peer, 'no response for get_headers')
+                self.punish_peer(peer, "no response for get_headers")
 
         # pick a peer that's ready
-        peers = [p for p in self.peers if (p.verack and p not in self._inflight_headers)]
-        if not peers: return
+        peers = [
+            p for p in self.peers if (p.verack and p not in self._inflight_headers)
+        ]
+        if not peers:
+            return
         peer = random.choice(peers)
         self._inflight_headers[peer] = now
 
         # request the next block headers (if any)
         locator = self._blocks.block_locator_hashes()
-        getheaders = protocol.GetHeaders(self.coin.protocol_version, locator, chr(0) * 32)
+        getheaders = protocol.GetHeaders(
+            self.coin.protocol_version, locator, chr(0) * 32
+        )
         peer.send_message(getheaders)
-
 
     def sync_blockchain_blocks(self):
 
         # we can handle more incomplete blocks
         if len(self._incomplete_blocks) < self.MAX_INCOMPLETE_BLOCKS:
-            incomplete = self._blocks.incomplete_blocks(from_block = self._last_incomplete_block, max_count = self.MAX_INCOMPLETE_FETCH)
+            incomplete = self._blocks.incomplete_blocks(
+                from_block=self._last_incomplete_block,
+                max_count=self.MAX_INCOMPLETE_FETCH,
+            )
             if incomplete:
                 for block in incomplete:
-                    if block.hash in self._incomplete_blocks: continue
+                    if block.hash in self._incomplete_blocks:
+                        continue
                     self._incomplete_blocks[block.hash] = 0
                 self._last_incomplete_block = incomplete[-1]
 
@@ -326,7 +361,9 @@ class Node(BaseNode):
                         continue
                     self._incomplete_blocks[hash] = now
 
-                    getdata.append(protocol.InventoryVector(protocol.OBJECT_TYPE_MSG_BLOCK, hash))
+                    getdata.append(
+                        protocol.InventoryVector(protocol.OBJECT_TYPE_MSG_BLOCK, hash)
+                    )
                     if len(getdata) + inflight >= self.MAX_INCOMPLETE_INFLIGHT:
                         break
 
@@ -341,4 +378,3 @@ class Node(BaseNode):
                 if peer not in self._inflight_blocks:
                     self._inflight_blocks[peer] = 0
                 self._inflight_blocks[peer] += len(getdata)
-

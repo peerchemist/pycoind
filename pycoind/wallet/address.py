@@ -31,10 +31,11 @@ from ..util.ecdsa import SECP256k1 as curve
 from ..util.ecdsa.util import string_to_number, number_to_string, randrange
 from ..util.pyaes.aes import AES
 
-__all__ = ['Address', 'EncryptedAddress', 'get_address', 'PrintedAddress']
+__all__ = ["Address", "EncryptedAddress", "get_address", "PrintedAddress"]
+
 
 class BaseAddress(object):
-    def __init__(self, private_key, coin = coins.Bitcoin):
+    def __init__(self, private_key, coin=coins.Bitcoin):
         self._private_key = private_key
         self._coin = coin
 
@@ -44,37 +45,36 @@ class BaseAddress(object):
 
     @property
     def _privkey(self):
-        'The binary representation of a private key.'
+        "The binary representation of a private key."
 
         if self.private_key is None:
             return None
         return util.key.privkey_from_wif(self.private_key)
 
 
-
 class Address(BaseAddress):
-    '''Wallet Address.
+    """Wallet Address.
 
        Provide exactly one of:
          private_key    WIF encoded private key (compressed or uncompressed)
-         public_key     binary public key (compressed or uncompressed)'''
+         public_key     binary public key (compressed or uncompressed)"""
 
-    def __init__(self, public_key = None, private_key = None, coin = coins.Bitcoin):
+    def __init__(self, public_key=None, private_key=None, coin=coins.Bitcoin):
         BaseAddress.__init__(self, private_key, coin)
 
         self._compressed = False
 
         if private_key:
             if public_key is not None:
-                raise ValueError('cannot specify public_key and private_key')
+                raise ValueError("cannot specify public_key and private_key")
 
             self._private_key = private_key
 
             # this is a compressed private key
-            if private_key.startswith('L') or private_key.startswith('K'):
+            if private_key.startswith("L") or private_key.startswith("K"):
                 self._compressed = True
-            elif not private_key.startswith('5'):
-                raise ValueError('unknown private key type: %r' % private_key[0])
+            elif not private_key.startswith("5"):
+                raise ValueError("unknown private key type: %r" % private_key[0])
 
             # determine the public key (internally, we only store uncompressed)
             secexp = string_to_number(util.key.privkey_from_wif(self._private_key))
@@ -89,25 +89,27 @@ class Address(BaseAddress):
             # we store the public key decompressed
             if public_key[0] == chr(0x04):
                 if len(public_key) != 65:
-                    raise ValueError('invalid uncomprssed public key')
+                    raise ValueError("invalid uncomprssed public key")
             elif public_key[0] in (chr(0x02), chr(0x03)):
                 public_key = util.key.decompress_public_key(public_key)
                 self._compressed = True
             else:
-                raise ValueError('invalid public key')
+                raise ValueError("invalid public key")
 
             self._public_key = public_key
 
         # we got no parameters
         else:
-            raise ValueError('no address parameters')
+            raise ValueError("no address parameters")
 
         # determine the address
-        self._address = util.key.publickey_to_address(self.public_key, version = coin.address_version)
+        self._address = util.key.publickey_to_address(
+            self.public_key, version=coin.address_version
+        )
 
     @property
     def public_key(self):
-        'The public key, compressed if the address is compressed.'
+        "The public key, compressed if the address is compressed."
         if self._compressed:
             return util.key.compress_public_key(self._public_key)
         return self._public_key
@@ -117,19 +119,19 @@ class Address(BaseAddress):
     compressed = property(lambda s: s._compressed)
 
     @staticmethod
-    def generate(compressed = True, coin = coins.Bitcoin):
-        'Generate a new random address.'
+    def generate(compressed=True, coin=coins.Bitcoin):
+        "Generate a new random address."
 
         secexp = randrange(curve.order)
         key = number_to_string(secexp, curve.order)
         if compressed:
             key = key + chr(0x01)
-        return Address(private_key = util.key.privkey_to_wif(key), coin = coin)
+        return Address(private_key=util.key.privkey_to_wif(key), coin=coin)
 
     @staticmethod
-    def from_binary(binary_key, compressed = True):
-        '''Returns a key associated with a 32-byte key. This is useful for
-           brain wallets or wallets generated from other sources of entropy.'''
+    def from_binary(binary_key, compressed=True):
+        """Returns a key associated with a 32-byte key. This is useful for
+           brain wallets or wallets generated from other sources of entropy."""
 
         if len(binary_key) == 32:
             key = string_to_number(binary_key)
@@ -137,72 +139,90 @@ class Address(BaseAddress):
                 if compressed:
                     binary_key += chr(0x01)
                 private_key = util.key.privkey_to_wif(binary_key)
-                return Address(private_key = private_key)
+                return Address(private_key=private_key)
 
-        raise ValueError('invalid binary key')
+        raise ValueError("invalid binary key")
 
     def decompress(self):
-        'Returns the decompressed address.'
+        "Returns the decompressed address."
 
-        if not self.compressed: return self
+        if not self.compressed:
+            return self
 
         if self.private_key:
-            return Address(private_key = util.key.privkey_to_wif(self._privkey), coin = self.coin)
+            return Address(
+                private_key=util.key.privkey_to_wif(self._privkey), coin=self.coin
+            )
 
         if address.public_key:
-            return Address(public_key = util.key.decompress_public_key(self.public_key), coin = self.coin)
+            return Address(
+                public_key=util.key.decompress_public_key(self.public_key),
+                coin=self.coin,
+            )
 
-        raise ValueError('address cannot be decompressed')
+        raise ValueError("address cannot be decompressed")
 
     def compress(self):
-        'Returns the compressed address.'
+        "Returns the compressed address."
 
-        if self.compressed: return self
+        if self.compressed:
+            return self
 
         if self.private_key:
-            return Address(private_key = util.key.privkey_to_wif(self._privkey + chr(0x01)), coin = self.coin)
+            return Address(
+                private_key=util.key.privkey_to_wif(self._privkey + chr(0x01)),
+                coin=self.coin,
+            )
 
         if address.public_key:
-            return Address(public_key = util.key.compress_public_key(self.public_key), coin = self.coin)
+            return Address(
+                public_key=util.key.compress_public_key(self.public_key), coin=self.coin
+            )
 
-        raise ValueError('address cannot be compressed')
+        raise ValueError("address cannot be compressed")
 
     def encrypt(self, passphrase):
-        'Return an encrypted address using  passphrase.'
+        "Return an encrypted address using  passphrase."
 
         if self.private_key is None:
-            raise ValueError('cannot encrypt address without private key')
+            raise ValueError("cannot encrypt address without private key")
 
         return _encrypt_private_key(self.private_key, passphrase, self.coin)
 
     def sign(self, data):
         "Signs data with this address' private key."
 
-        if self.private_key is None: raise Exception()
+        if self.private_key is None:
+            raise Exception()
         pk = util.key.privkey_from_wif(self.private_key, self.coin.address_version)
         return util.ecc.sign(data, pk)
 
     def verify(self, data, signature):
         "Verifies the data and signature with this address' public key."
 
-        if self.public_key is None: raise Exception()
+        if self.public_key is None:
+            raise Exception()
         return util.ecc.verify(data, self._public_key, signature)
 
     def __str__(self):
-        private_key = 'None'
-        if self.private_key: private_key = '**redacted**'
-        return '<Address address=%s public_key=%s private_key=%s>' % (self.address, self.public_key.encode('hex'), private_key)
+        private_key = "None"
+        if self.private_key:
+            private_key = "**redacted**"
+        return "<Address address=%s public_key=%s private_key=%s>" % (
+            self.address,
+            self.public_key.encode("hex"),
+            private_key,
+        )
 
 
 # See: https://github.com/bitcoin/bips/blob/master/bip-0038.mediawiki
 class EncryptedAddress(BaseAddress):
-
-    def __init__(self, private_key, coin = coins.Bitcoin):
+    def __init__(self, private_key, coin=coins.Bitcoin):
         BaseAddress.__init__(self, private_key, coin)
 
         privkey = self._privkey
-        if len(privkey) != 39 or privkey[0:2] not in ('\x01\x42', '\x01\x43'):
-            raise ValueError('unsupported encrypted address')
+        if len(privkey) != 39 or privkey[0:2] not in ("\x01\x42", "\x01\x43"):
+            raise ValueError("unsupported encrypted address")
 
         self._compressed = bool(ord(privkey[2]) & 0x20)
 
@@ -212,14 +232,14 @@ class EncryptedAddress(BaseAddress):
     compressed = property(lambda s: s._compressed)
 
     @staticmethod
-    def generate(passphrase, compressed = True, coin = coins.Bitcoin):
-        'Generate a new random address encrypted with passphrase.'
+    def generate(passphrase, compressed=True, coin=coins.Bitcoin):
+        "Generate a new random address encrypted with passphrase."
 
         address = Address.generate(compressed, coin)
         return EncryptedAddress.encrypt_address(address, passphrase, compressed)
 
     def decrypt(self, passphrase):
-        'Return a decrypted address of this address, using passphrase.'
+        "Return a decrypted address of this address, using passphrase."
 
         # what function do we use to decrypt?
         if self._privkey[1] == chr(0x42):
@@ -230,7 +250,7 @@ class EncryptedAddress(BaseAddress):
         return decrypt(self.private_key, passphrase, self.coin)
 
     def __str__(self):
-        return '<EncryptedAddress private_key=%s>' % self.private_key
+        return "<EncryptedAddress private_key=%s>" % self.private_key
 
 
 class PrintedAddress(Address):
@@ -248,26 +268,26 @@ class PrintedAddress(Address):
        private key."""
 
     def __init__(self):
-        raise ValueError('cannot instantiate a PrintedAddress')
+        raise ValueError("cannot instantiate a PrintedAddress")
 
     lot = property(lambda s: s._lot)
     sequence = property(lambda s: s._sequence)
 
     @staticmethod
-    def generate_intermediate_code(passphrase, lot = None, sequence = None):
-        '''Generates an intermediate code for generated printed addresses
-           using passphrase and optional lot and sequence.'''
+    def generate_intermediate_code(passphrase, lot=None, sequence=None):
+        """Generates an intermediate code for generated printed addresses
+           using passphrase and optional lot and sequence."""
 
         return _generate_intermediate_code(passphrase, lot, sequence)
 
     @staticmethod
-    def generate(intermediate_code, coin = coins.Bitcoin):
-        'Generate a new random printed address for the intermediate_code.'
+    def generate(intermediate_code, coin=coins.Bitcoin):
+        "Generate a new random printed address for the intermediate_code."
 
         return _generate_printed_address(intermediate_code, coin)
 
     @staticmethod
-    def confirm(confirmation_code, passphrase, coin = coins.Bitcoin):
+    def confirm(confirmation_code, passphrase, coin=coins.Bitcoin):
         "Confirm a passphrase decrypts a printed address' confirmation_code."
 
         return _check_confirmation_code(confirmation_code, passphrase, coin)
@@ -280,7 +300,7 @@ class EncryptedPrintedAddress(EncryptedAddress):
           PrintedAddress.generate(code)"""
 
     def __init__(self):
-        raise ValueError('cannot instantiate an EncryptedPrintedAddress')
+        raise ValueError("cannot instantiate an EncryptedPrintedAddress")
 
     public_key = property(lambda s: s._public_key)
     address = property(lambda s: s._address)
@@ -297,7 +317,7 @@ class Confirmation(object):
           PrintedAddress.confirm(confimation_code, passphrase)"""
 
     def __init__(self):
-        raise ValueError('cannot instantiate a Confirmation')
+        raise ValueError("cannot instantiate a Confirmation")
 
     coin = property(lambda s: s._coin)
 
@@ -310,39 +330,46 @@ class Confirmation(object):
     sequence = property(lambda s: s._sequence)
 
     def __str__(self):
-        return '<Confirmation address=%s lot=%s sequence=%s>' % (self.address, self.lot, self.sequence)
+        return "<Confirmation address=%s lot=%s sequence=%s>" % (
+            self.address,
+            self.lot,
+            self.sequence,
+        )
 
 
 def _normalize_utf(text):
     'Returns text encoded in UTF-8 using "Normalization Form C".'
 
-    return unicodedata.normalize('NFC', unicode(text)).encode('utf8')
+    return unicodedata.normalize("NFC", str(text)).encode("utf8")
+
 
 def _encrypt_xor(a, b, aes):
-    'Returns encrypt(a ^ b).'
+    "Returns encrypt(a ^ b)."
 
     block = [(ord(a) ^ ord(b)) for (a, b) in zip(a, b)]
     return "".join(chr(c) for c in aes.encrypt(block))
 
+
 def _decrypt_xor(a, b, aes):
-    'Returns decrypt(a) ^ b)'
+    "Returns decrypt(a) ^ b)"
 
     a = [ord(c) for c in a]
     block = [(a ^ ord(b)) for (a, b) in zip(aes.decrypt(a), b)]
     return "".join(chr(c) for c in block)
 
-def _encrypt_private_key(private_key, passphrase, coin = coins.Bitcoin):
-    'Encrypts a private key.'
+
+def _encrypt_private_key(private_key, passphrase, coin=coins.Bitcoin):
+    "Encrypts a private key."
 
     # compute the flags
-    flagbyte = 0xc0
-    if private_key.startswith('L') or private_key.startswith('K'):
+    flagbyte = 0xC0
+    if private_key.startswith("L") or private_key.startswith("K"):
         flagbyte |= 0x20
-    elif not private_key.startswith('5'):
-        raise ValueError('unknown private key type')
+    elif not private_key.startswith("5"):
+        raise ValueError("unknown private key type")
 
     # compute the address, which is used for the salt
-    address = Address(private_key = private_key, coin = coin)
+    address = Address(private_key=private_key, coin=coin)
     salt = util.sha256d(address.address)[:4]
 
     # compute the key
@@ -352,19 +379,20 @@ def _encrypt_private_key(private_key, passphrase, coin = coins.Bitcoin):
     aes = AES(derived_half2)
 
     # encrypt the private key
-    privkey  = address._privkey
+    privkey = address._privkey
     encrypted_half1 = _encrypt_xor(privkey[:16], derived_half1[:16], aes)
     encrypted_half2 = _encrypt_xor(privkey[16:], derived_half1[16:], aes)
 
     # encode it
-    payload = (chr(0x01) + chr(0x42) + chr(flagbyte) + salt +
-               encrypted_half1 + encrypted_half2)
+    payload = (
+        chr(0x01) + chr(0x42) + chr(flagbyte) + salt + encrypted_half1 + encrypted_half2
+    )
 
     return EncryptedAddress(util.base58.encode_check(payload), coin)
 
 
-def _decrypt_private_key(private_key, passphrase, coin = coins.Bitcoin):
-    'Decrypts a private key.'
+def _decrypt_private_key(private_key, passphrase, coin=coins.Bitcoin):
+    "Decrypts a private key."
 
     payload = util.base58.decode_check(private_key)
     if len(payload) != 39 or payload[:2] != "\x01\x42":
@@ -393,43 +421,48 @@ def _decrypt_private_key(private_key, passphrase, coin = coins.Bitcoin):
         privkey += chr(0x01)
 
     # check the decrypted private key is correct (otherwise, wrong password)
-    address = Address(private_key = util.key.privkey_to_wif(privkey), coin = coin)
+    address = Address(private_key=util.key.privkey_to_wif(privkey), coin=coin)
     if util.sha256d(address.address)[:4] != salt:
         return None
 
-    return Address(private_key = address.private_key, coin = coin)
+    return Address(private_key=address.private_key, coin=coin)
+
 
 def _key_from_point(point, compressed):
-    'Converts a point into a key.'
+    "Converts a point into a key."
 
-    key = (chr(0x04) +
-           number_to_string(point.x(), curve.order) +
-           number_to_string(point.y(), curve.order))
+    key = (
+        chr(0x04)
+        + number_to_string(point.x(), curve.order)
+        + number_to_string(point.y(), curve.order)
+    )
 
     if compressed:
         key = util.key.compress_public_key(key)
 
     return key
 
+
 def _key_to_point(key):
-    'Converts a key to an EC Point.'
+    "Converts a key to an EC Point."
 
     key = util.key.decompress_public_key(key)
     x = string_to_number(key[1:33])
     y = string_to_number(key[33:65])
     return util.ecc.point(x, y)
 
-def _generate_intermediate_code(passphrase, lot = None, sequence = None):
-    'Generates a new intermediate code for passphrase.'
+
+def _generate_intermediate_code(passphrase, lot=None, sequence=None):
+    "Generates a new intermediate code for passphrase."
 
     if (lot is None) ^ (sequence is None):
-        raise ValueError('must specify both or neither of lot and sequence')
+        raise ValueError("must specify both or neither of lot and sequence")
 
-    if lot and not (0 <= lot <= 0xfffff):
-        raise ValueError('lot is out of range')
+    if lot and not (0 <= lot <= 0xFFFFF):
+        raise ValueError("lot is out of range")
 
-    if sequence and not (0 <= sequence <= 0xfff):
-        raise ValueError('lot is out of range')
+    if sequence and not (0 <= sequence <= 0xFFF):
+        raise ValueError("lot is out of range")
 
     # compute owner salt and entropy
     if lot is None:
@@ -437,7 +470,7 @@ def _generate_intermediate_code(passphrase, lot = None, sequence = None):
         owner_entropy = owner_salt
     else:
         owner_salt = os.urandom(4)
-        lot_sequence = struct.pack('>I', (lot << 12) | sequence)
+        lot_sequence = struct.pack(">I", (lot << 12) | sequence)
         owner_entropy = owner_salt + lot_sequence
 
     prefactor = util.scrypt(_normalize_utf(passphrase), owner_salt, 16384, 8, 8, 32)
@@ -450,7 +483,7 @@ def _generate_intermediate_code(passphrase, lot = None, sequence = None):
     point = curve.generator * pass_factor
     pass_point = _key_from_point(point, True)
 
-    prefix = '\x2c\xe9\xb3\xe1\xff\x39\xe2'
+    prefix = "\x2c\xe9\xb3\xe1\xff\x39\xe2"
     if lot is None:
         prefix += chr(0x53)
     else:
@@ -460,15 +493,15 @@ def _generate_intermediate_code(passphrase, lot = None, sequence = None):
     return util.base58.encode_check(prefix + owner_entropy + pass_point)
 
 
-def _generate_printed_address(intermediate_code, compressed, coin = coins.Bitcoin):
+def _generate_printed_address(intermediate_code, compressed, coin=coins.Bitcoin):
 
     payload = util.base58.decode_check(intermediate_code)
 
     if len(payload) != 49:
-        raise ValueError('invalid intermediate code')
+        raise ValueError("invalid intermediate code")
 
-    if payload[0:7] != '\x2c\xe9\xb3\xe1\xff\x39\xe2':
-        raise ValueError('invalid intermediate code prefix')
+    if payload[0:7] != "\x2c\xe9\xb3\xe1\xff\x39\xe2":
+        raise ValueError("invalid intermediate code prefix")
 
     # de-searialize the payload
     magic_suffix = ord(payload[7])
@@ -485,11 +518,11 @@ def _generate_printed_address(intermediate_code, compressed, coin = coins.Bitcoi
     sequence = None
     if magic_suffix == 0x51:
         flagbyte |= 0x04
-        lot_sequence = struct.unpack('>I', owner_entropy[4:8])[0]
+        lot_sequence = struct.unpack(">I", owner_entropy[4:8])[0]
         lot = lot_sequence >> 12
-        sequence = lot_sequence & 0xfff
+        sequence = lot_sequence & 0xFFF
     elif magic_suffix != 0x53:
-        raise ValueError('invalid intermediate code prefix')
+        raise ValueError("invalid intermediate code prefix")
 
     # generate the random seedb
     seedb = os.urandom(24)
@@ -512,12 +545,19 @@ def _generate_printed_address(intermediate_code, compressed, coin = coins.Bitcoi
 
     # encrypt the seedb; it's only 24 bytes, so we can nest to save space
     encrypted_half1 = _encrypt_xor(seedb[:16], derived_half1[:16], aes)
-    encrypted_half2 = _encrypt_xor(encrypted_half1[8:16] + seedb[16:24],
-                                   derived_half1[16:], aes)
+    encrypted_half2 = _encrypt_xor(
+        encrypted_half1[8:16] + seedb[16:24], derived_half1[16:], aes
+    )
 
     # final binary private key
-    payload = ('\x01\x43' + chr(flagbyte) + address_hash + owner_entropy +
-               encrypted_half1[0:8] + encrypted_half2)
+    payload = (
+        "\x01\x43"
+        + chr(flagbyte)
+        + address_hash
+        + owner_entropy
+        + encrypted_half1[0:8]
+        + encrypted_half2
+    )
     private_key = util.base58.encode_check(payload)
 
     # generate the confirmation code point
@@ -532,13 +572,12 @@ def _generate_printed_address(intermediate_code, compressed, coin = coins.Bitcoi
 
     # make a nice human readable string, beginning with "cfrm"
     prefix = "\x64\x3b\xf6\xa8\x9a"
-    payload = (prefix + chr(flagbyte) + address_hash + owner_entropy +
-               encrypted_pointb)
+    payload = prefix + chr(flagbyte) + address_hash + owner_entropy + encrypted_pointb
     confirmation_code = util.base58.encode_check(payload)
 
     # wrap it up in a nice object
     self = EncryptedPrintedAddress.__new__(EncryptedPrintedAddress)
-    BaseAddress.__init__(self, private_key = private_key, coin = coin)
+    BaseAddress.__init__(self, private_key=private_key, coin=coin)
 
     self._public_key = public_key
     self._address = address
@@ -551,13 +590,13 @@ def _generate_printed_address(intermediate_code, compressed, coin = coins.Bitcoi
     return self
 
 
-def _check_confirmation_code(confirmation_code, passphrase, coin = coins.Bitcoin):
-    '''Verifies a confirmation code with passphrase and returns a
-       Confirmation object.'''
+def _check_confirmation_code(confirmation_code, passphrase, coin=coins.Bitcoin):
+    """Verifies a confirmation code with passphrase and returns a
+       Confirmation object."""
 
     payload = util.base58.decode_check(confirmation_code)
-    if payload[:5] != '\x64\x3b\xf6\xa8\x9a':
-        raise ValueError('invalid confirmation code prefix')
+    if payload[:5] != "\x64\x3b\xf6\xa8\x9a":
+        raise ValueError("invalid confirmation code prefix")
 
     # de-serialize the payload
     flagbyte = ord(payload[5])
@@ -576,9 +615,9 @@ def _check_confirmation_code(confirmation_code, passphrase, coin = coins.Bitcoin
     sequence = None
     owner_salt = owner_entropy
     if flagbyte & 0x04:
-        lot_sequence = struct.unpack('>I', owner_entropy[4:8])[0]
+        lot_sequence = struct.unpack(">I", owner_entropy[4:8])[0]
         lot = lot_sequence >> 12
-        sequence = lot_sequence & 0xfff
+        sequence = lot_sequence & 0xFFF
         owner_salt = owner_entropy[:4]
 
     prefactor = util.scrypt(_normalize_utf(passphrase), owner_salt, 16384, 8, 8, 32)
@@ -612,7 +651,7 @@ def _check_confirmation_code(confirmation_code, passphrase, coin = coins.Bitcoin
 
     # verify the checksum
     if util.sha256d(address)[:4] != address_hash:
-        raise ValueError('invalid passphrase')
+        raise ValueError("invalid passphrase")
 
     # wrap it up in a nice object
     self = Confirmation.__new__(Confirmation)
@@ -629,16 +668,16 @@ def _check_confirmation_code(confirmation_code, passphrase, coin = coins.Bitcoin
     return self
 
 
-def _decrypt_printed_private_key(private_key, passphrase, coin = coins.Bitcoin):
-    'Decrypts a printed private key returning an instance of PrintedAddress.'
+def _decrypt_printed_private_key(private_key, passphrase, coin=coins.Bitcoin):
+    "Decrypts a printed private key returning an instance of PrintedAddress."
 
     payload = util.base58.decode_check(private_key)
 
-    if payload[0:2] != '\x01\x43':
-        raise ValueError('invalid printed address private key prefix')
+    if payload[0:2] != "\x01\x43":
+        raise ValueError("invalid printed address private key prefix")
 
     if len(payload) != 39:
-        raise ValueError('invalid printed address private key length')
+        raise ValueError("invalid printed address private key length")
 
     # de-serialize the payload
     flagbyte = ord(payload[2])
@@ -658,9 +697,9 @@ def _decrypt_printed_private_key(private_key, passphrase, coin = coins.Bitcoin):
     (lot, sequence) = (None, None)
     owner_salt = owner_entropy
     if flagbyte & 0x04:
-        lot_sequence = struct.unpack('>I', owner_entropy[4:8])[0]
+        lot_sequence = struct.unpack(">I", owner_entropy[4:8])[0]
         lot = lot_sequence >> 12
-        sequence = lot_sequence & 0xfff
+        sequence = lot_sequence & 0xFFF
         owner_salt = owner_entropy[0:4]
 
     prefactor = util.scrypt(_normalize_utf(passphrase), owner_salt, 16384, 8, 8, 32)
@@ -698,31 +737,33 @@ def _decrypt_printed_private_key(private_key, passphrase, coin = coins.Bitcoin):
 
     # wrap it up in a nice object
     self = PrintedAddress.__new__(PrintedAddress)
-    Address.__init__(self, private_key = util.key.privkey_to_wif(private_key), coin = coin)
+    Address.__init__(self, private_key=util.key.privkey_to_wif(private_key), coin=coin)
 
     self._lot = lot
     self._sequence = sequence
 
     # verify the checksum
     if address_hash != util.sha256d(self.address)[:4]:
-        raise ValueError('incorrect passphrase')
+        raise ValueError("incorrect passphrase")
 
     return self
 
-#def requires_passphrase(private_key):
+
+# def requires_passphrase(private_key):
 #    return private_key.startswith('6P')
 
-def get_address(private_key, passphrase = None, coin = coins.Bitcoin):
-    '''Detects the type of private key uses the correct class to instantiate
-       an Address, optionally decrypting it with passphrase.'''
+
+def get_address(private_key, passphrase=None, coin=coins.Bitcoin):
+    """Detects the type of private key uses the correct class to instantiate
+       an Address, optionally decrypting it with passphrase."""
 
     # unencrypted
-    if private_key[0] in ('5', 'L', 'K'):
-        return Address(private_key = private_key, coin = coin)
+    if private_key[0] in ("5", "L", "K"):
+        return Address(private_key=private_key, coin=coin)
 
     # encrypted
-    if private_key.startswith('6P'):
-        address = EncryptedAddress(private_key = private_key, coin = coin)
+    if private_key.startswith("6P"):
+        address = EncryptedAddress(private_key=private_key, coin=coin)
 
         # decrypt it if we have a passphrase
         if passphrase:
@@ -731,5 +772,3 @@ def get_address(private_key, passphrase = None, coin = coins.Bitcoin):
         return address
 
     return None
-
-

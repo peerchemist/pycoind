@@ -21,7 +21,6 @@
 # THE SOFTWARE.
 
 
-
 from .address import Address, EncryptedAddress, get_address, PrintedAddress
 
-__all__ = ['Address', 'EncryptedAddress', 'get_address', 'PrintedAddress']
+__all__ = ["Address", "EncryptedAddress", "get_address", "PrintedAddress"]

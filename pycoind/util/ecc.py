@@ -32,50 +32,51 @@ from .hash import sha256d
 
 from .key import decompress_public_key, privkey_from_wif
 
-__all__ = ['sign', 'verify']
+__all__ = ["sign", "verify"]
 
 # http://stackoverflow.com/questions/1604464/twos-complement-in-python
 def twos_comp(val, bits):
     "Compute the 2's compliment of val with the width bits."
 
-    if (val & (1 << (bits - 1))):
+    if val & (1 << (bits - 1)):
         val = val - (1 << bits)
     return val
+
 
 def remove_integer(string):
     if not string.startswith(b("\x02")):
         n = string[0] if isinstance(string[0], der.integer_types) else ord(string[0])
         raise UnexpectedDER("wanted integer (0x02), got 0x%02x" % n)
     length, llen = der.read_length(string[1:])
-    numberbytes = string[1+llen:1+llen+length]
-    rest = string[1+llen+length:]
-    #nbytes = numberbytes[0] if isinstance(numberbytes[0], der.integer_types) else ord(numberbytes[0])
+    numberbytes = string[1 + llen : 1 + llen + length]
+    rest = string[1 + llen + length :]
+    # nbytes = numberbytes[0] if isinstance(numberbytes[0], der.integer_types) else ord(numberbytes[0])
     value = int(binascii.hexlify(numberbytes), 16)
     return (value, rest)
-    #return (twos_comp(value, len(numberbytes) * 8), rest)
+    # return (twos_comp(value, len(numberbytes) * 8), rest)
 
 
 def sigdecode_der(sig_der, order):
-    '''We use a slightly more liberal der decoder because sometimes signatures
-       seem to have trailing 0 bytes. (see block bitcoin@135106)'''
+    """We use a slightly more liberal der decoder because sometimes signatures
+       seem to have trailing 0 bytes. (see block bitcoin@135106)"""
 
     rs_strings, empty = der.remove_sequence(sig_der)
-    #if empty != b("") and empty.strip(chr(0)):
+    # if empty != b("") and empty.strip(chr(0)):
     #    raise der.UnexpectedDER("trailing junk after DER sig: %s" %
     #                             binascii.hexlify(empty))
     r, rest = remove_integer(rs_strings)
     s, empty = remove_integer(rest)
-    #if empty != b("") and empty.strip(chr(0)):
+    # if empty != b("") and empty.strip(chr(0)):
     #    raise der.UnexpectedDER("trailing junk after DER numbers: %s" %
     #                  binascii.hexlify(empty))
-    #if s < 0:
+    # if s < 0:
     #    s = s % order
     return r, s
 
 
 def sign(data, private_key):
     key = ecdsa.SigningKey.from_string(private_key, ecdsa.SECP256k1)
-    return key.sign_digest(sha256d(data), sigencode = ecdsa.util.sigencode_der)
+    return key.sign_digest(sha256d(data), sigencode=ecdsa.util.sigencode_der)
 
 
 def verify(data, public_key, signature):
@@ -86,11 +87,14 @@ def verify(data, public_key, signature):
 
     key = ecdsa.VerifyingKey.from_string(public_key[1:], ecdsa.SECP256k1)
     try:
-        return key.verify_digest(signature, sha256d(data), sigdecode = sigdecode_der)
-    except ecdsa.BadSignatureError, e:
+        return key.verify_digest(signature, sha256d(data), sigdecode=sigdecode_der)
+    except ecdsa.BadSignatureError as e:
         return False
 
+
 from .ecdsa.util import number_to_string, string_to_number
+
+
 def shared_secret(public_key, private_key):
     public_key = decompress_public_key(public_key)
 
@@ -106,7 +110,6 @@ def shared_secret(public_key, private_key):
 
     return shared_key
 
+
 def point(x, y):
     return ellipticcurve.Point(ecdsa.SECP256k1.curve, x, y)
-
-

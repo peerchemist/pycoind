@@ -10,10 +10,14 @@ from .util import oid_ecPublicKey, encoded_oid_ecPublicKey
 from .six import PY3, b
 from hashlib import sha1
 
+
 class BadSignatureError(Exception):
     pass
+
+
 class BadDigestError(Exception):
     pass
+
 
 class VerifyingKey:
     def __init__(self, _error__please_use_generate=None):
@@ -30,13 +34,14 @@ class VerifyingKey:
         return self
 
     @classmethod
-    def from_string(klass, string, curve=NIST192p, hashfunc=sha1,
-                    validate_point=True):
+    def from_string(klass, string, curve=NIST192p, hashfunc=sha1, validate_point=True):
         order = curve.order
-        assert len(string) == curve.verifying_key_length, \
-               (len(string), curve.verifying_key_length)
-        xs = string[:curve.baselen]
-        ys = string[curve.baselen:]
+        assert len(string) == curve.verifying_key_length, (
+            len(string),
+            curve.verifying_key_length,
+        )
+        xs = string[: curve.baselen]
+        ys = string[curve.baselen :]
         assert len(xs) == curve.baselen, (len(xs), curve.baselen)
         assert len(ys) == curve.baselen, (len(ys), curve.baselen)
         x = string_to_number(xs)
@@ -44,6 +49,7 @@ class VerifyingKey:
         if validate_point:
             assert ecdsa.point_is_valid(curve.generator, x, y)
         from . import ellipticcurve
+
         point = ellipticcurve.Point(curve.curve, x, y, order)
         return klass.from_public_point(point, curve, hashfunc)
 
@@ -54,23 +60,26 @@ class VerifyingKey:
     @classmethod
     def from_der(klass, string):
         # [[oid_ecPublicKey,oid_curve], point_str_bitstring]
-        s1,empty = der.remove_sequence(string)
+        s1, empty = der.remove_sequence(string)
         if empty != b(""):
-            raise der.UnexpectedDER("trailing junk after DER pubkey: %s" %
-                                    binascii.hexlify(empty))
-        s2,point_str_bitstring = der.remove_sequence(s1)
+            raise der.UnexpectedDER(
+                "trailing junk after DER pubkey: %s" % binascii.hexlify(empty)
+            )
+        s2, point_str_bitstring = der.remove_sequence(s1)
         # s2 = oid_ecPublicKey,oid_curve
         oid_pk, rest = der.remove_object(s2)
         oid_curve, empty = der.remove_object(rest)
         if empty != b(""):
-            raise der.UnexpectedDER("trailing junk after DER pubkey objects: %s" %
-                                    binascii.hexlify(empty))
+            raise der.UnexpectedDER(
+                "trailing junk after DER pubkey objects: %s" % binascii.hexlify(empty)
+            )
         assert oid_pk == oid_ecPublicKey, (oid_pk, oid_ecPublicKey)
         curve = find_curve(oid_curve)
         point_str, empty = der.remove_bitstring(point_str_bitstring)
         if empty != b(""):
-            raise der.UnexpectedDER("trailing junk after pubkey pointstring: %s" %
-                                    binascii.hexlify(empty))
+            raise der.UnexpectedDER(
+                "trailing junk after pubkey pointstring: %s" % binascii.hexlify(empty)
+            )
         assert point_str.startswith(b("\x00\x04"))
         return klass.from_string(point_str[2:], curve)
 
@@ -91,9 +100,10 @@ class VerifyingKey:
         x_str = number_to_string(self.pubkey.point.x(), order)
         y_str = number_to_string(self.pubkey.point.y(), order)
         point_str = b("\x00\x04") + x_str + y_str
-        return der.encode_sequence(der.encode_sequence(encoded_oid_ecPublicKey,
-                                                       self.curve.encoded_oid),
-                                   der.encode_bitstring(point_str))
+        return der.encode_sequence(
+            der.encode_sequence(encoded_oid_ecPublicKey, self.curve.encoded_oid),
+            der.encode_bitstring(point_str),
+        )
 
     def verify(self, signature, data, hashfunc=None, sigdecode=sigdecode_string):
         hashfunc = hashfunc or self.default_hashfunc
@@ -102,15 +112,17 @@ class VerifyingKey:
 
     def verify_digest(self, signature, digest, sigdecode=sigdecode_string):
         if len(digest) > self.curve.baselen:
-            raise BadDigestError("this curve (%s) is too short "
-                                 "for your digest (%d)" % (self.curve.name,
-                                                           8*len(digest)))
+            raise BadDigestError(
+                "this curve (%s) is too short "
+                "for your digest (%d)" % (self.curve.name, 8 * len(digest))
+            )
         number = string_to_number(digest)
         r, s = sigdecode(signature, self.pubkey.order)
         sig = ecdsa.Signature(r, s)
         if self.pubkey.verifies(number, sig):
             return True
         raise BadSignatureError
+
 
 class SigningKey:
     def __init__(self, _error__please_use_generate=None):
@@ -135,11 +147,12 @@ class SigningKey:
         self.baselen = curve.baselen
         n = curve.order
         assert 1 <= secexp < n
-        pubkey_point = curve.generator*secexp
+        pubkey_point = curve.generator * secexp
         pubkey = ecdsa.Public_key(curve.generator, pubkey_point)
         pubkey.order = n
-        self.verifying_key = VerifyingKey.from_public_point(pubkey_point, curve,
-                                                            hashfunc)
+        self.verifying_key = VerifyingKey.from_public_point(
+            pubkey_point, curve, hashfunc
+        )
         self.privkey = ecdsa.Private_key(pubkey, secexp)
         self.privkey.order = n
         return self
@@ -156,45 +169,49 @@ class SigningKey:
         # PRIVATE KEY". The first is redundant.
         if PY3 and isinstance(string, str):
             string = string.encode()
-        privkey_pem = string[string.index(b("-----BEGIN EC PRIVATE KEY-----")):]
+        privkey_pem = string[string.index(b("-----BEGIN EC PRIVATE KEY-----")) :]
         return klass.from_der(der.unpem(privkey_pem), hashfunc)
+
     @classmethod
     def from_der(klass, string, hashfunc=sha1):
         # SEQ([int(1), octetstring(privkey),cont[0], oid(secp224r1),
         #      cont[1],bitstring])
         s, empty = der.remove_sequence(string)
         if empty != b(""):
-            raise der.UnexpectedDER("trailing junk after DER privkey: %s" %
-                                    binascii.hexlify(empty))
+            raise der.UnexpectedDER(
+                "trailing junk after DER privkey: %s" % binascii.hexlify(empty)
+            )
         one, s = der.remove_integer(s)
         if one != 1:
-            raise der.UnexpectedDER("expected '1' at start of DER privkey,"
-                                    " got %d" % one)
+            raise der.UnexpectedDER(
+                "expected '1' at start of DER privkey," " got %d" % one
+            )
         privkey_str, s = der.remove_octet_string(s)
         tag, curve_oid_str, s = der.remove_constructed(s)
         if tag != 0:
-            raise der.UnexpectedDER("expected tag 0 in DER privkey,"
-                                    " got %d" % tag)
+            raise der.UnexpectedDER("expected tag 0 in DER privkey," " got %d" % tag)
         curve_oid, empty = der.remove_object(curve_oid_str)
         if empty != b(""):
-            raise der.UnexpectedDER("trailing junk after DER privkey "
-                                    "curve_oid: %s" % binascii.hexlify(empty))
+            raise der.UnexpectedDER(
+                "trailing junk after DER privkey "
+                "curve_oid: %s" % binascii.hexlify(empty)
+            )
         curve = find_curve(curve_oid)
 
         # we don't actually care about the following fields
         #
-        #tag, pubkey_bitstring, s = der.remove_constructed(s)
-        #if tag != 1:
+        # tag, pubkey_bitstring, s = der.remove_constructed(s)
+        # if tag != 1:
         #    raise der.UnexpectedDER("expected tag 1 in DER privkey, got %d"
         #                            % tag)
-        #pubkey_str = der.remove_bitstring(pubkey_bitstring)
-        #if empty != "":
+        # pubkey_str = der.remove_bitstring(pubkey_bitstring)
+        # if empty != "":
         #    raise der.UnexpectedDER("trailing junk after DER privkey "
         #                            "pubkeystr: %s" % binascii.hexlify(empty))
 
         # our from_string method likes fixed-length privkey strings
         if len(privkey_str) < curve.baselen:
-            privkey_str = b("\x00")*(curve.baselen-len(privkey_str)) + privkey_str
+            privkey_str = b("\x00") * (curve.baselen - len(privkey_str)) + privkey_str
         return klass.from_string(privkey_str, curve, hashfunc)
 
     def to_string(self):
@@ -210,11 +227,12 @@ class SigningKey:
         # SEQ([int(1), octetstring(privkey),cont[0], oid(secp224r1),
         #      cont[1],bitstring])
         encoded_vk = b("\x00\x04") + self.get_verifying_key().to_string()
-        return der.encode_sequence(der.encode_integer(1),
-                                   der.encode_octet_string(self.to_string()),
-                                   der.encode_constructed(0, self.curve.encoded_oid),
-                                   der.encode_constructed(1, der.encode_bitstring(encoded_vk)),
-                                   )
+        return der.encode_sequence(
+            der.encode_integer(1),
+            der.encode_octet_string(self.to_string()),
+            der.encode_constructed(0, self.curve.encoded_oid),
+            der.encode_constructed(1, der.encode_bitstring(encoded_vk)),
+        )
 
     def get_verifying_key(self):
         return self.verifying_key
@@ -223,9 +241,13 @@ class SigningKey:
         hashfunc = hashfunc or self.default_hashfunc
         digest = hashfunc(data).digest()
 
-        return self.sign_digest_deterministic(digest, hashfunc=hashfunc, sigencode=sigencode)
+        return self.sign_digest_deterministic(
+            digest, hashfunc=hashfunc, sigencode=sigencode
+        )
 
-    def sign_digest_deterministic(self, digest, hashfunc=None, sigencode=sigencode_string):
+    def sign_digest_deterministic(
+        self, digest, hashfunc=None, sigencode=sigencode_string
+    ):
         """
         Calculates 'k' from data itself, removing the need for strong
         random generator and producing deterministic (reproducible) signatures.
@@ -236,7 +258,9 @@ class SigningKey:
 
         return self.sign_digest(digest, sigencode=sigencode, k=k)
 
-    def sign(self, data, entropy=None, hashfunc=None, sigencode=sigencode_string, k=None):
+    def sign(
+        self, data, entropy=None, hashfunc=None, sigencode=sigencode_string, k=None
+    ):
         """
         hashfunc= should behave like hashlib.sha1 . The output length of the
         hash (in bytes) must not be longer than the length of the curve order
@@ -255,9 +279,10 @@ class SigningKey:
 
     def sign_digest(self, digest, entropy=None, sigencode=sigencode_string, k=None):
         if len(digest) > self.curve.baselen:
-            raise BadDigestError("this curve (%s) is too short "
-                                 "for your digest (%d)" % (self.curve.name,
-                                                           8*len(digest)))
+            raise BadDigestError(
+                "this curve (%s) is too short "
+                "for your digest (%d)" % (self.curve.name, 8 * len(digest))
+            )
         number = string_to_number(digest)
         r, s = self.sign_number(number, entropy, k)
         return sigencode(r, s, self.privkey.order)

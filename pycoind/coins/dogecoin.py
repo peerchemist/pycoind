@@ -21,7 +21,7 @@
 # THE SOFTWARE.
 
 
-import coin
+from . import coin
 
 from .litecoin import Litecoin
 
@@ -29,7 +29,8 @@ from .. import util
 
 # https://github.com/dogecoin/dogecoin
 
-__all__ = ['Dogecoin']
+__all__ = ["Dogecoin"]
+
 
 class Dogecoin(Litecoin):
     name = "dogecoin"
@@ -41,24 +42,32 @@ class Dogecoin(Litecoin):
         ("seed.dogechain.info", 22556),
     ]
 
-    symbols = ['DOGE']
+    symbols = ["DOGE"]
     symbol = symbols[0]
 
     port = 22556
     rpc_port = 22555
 
     genesis_version = 1
-    genesis_block_hash = '9156352c1818b32e90c9e792efd6a11a82fe7956a630f03bbee236cedae3911a'.decode('hex')
-    genesis_merkle_root = '696ad20e2dd4365c7459b4a4a5af743d5e92c6da3229e6532cd605f6533f2a5b'.decode('hex')
+    genesis_block_hash = "9156352c1818b32e90c9e792efd6a11a82fe7956a630f03bbee236cedae3911a".decode(
+        "hex"
+    )
+    genesis_merkle_root = "696ad20e2dd4365c7459b4a4a5af743d5e92c6da3229e6532cd605f6533f2a5b".decode(
+        "hex"
+    )
     genesis_timestamp = 1386325540
     genesis_bits = 504365040
     genesis_nonce = 99943
 
-    magic = '\xc0\xc0\xc0\xc0'
+    magic = "\xc0\xc0\xc0\xc0"
 
     address_version = chr(30)
 
     block_height_guess = [
-        ('chain.so', util.fetch_url_json_path_int('https://chain.so/api/v2/get_info/DOGE', 'data/blocks')),
+        (
+            "chain.so",
+            util.fetch_url_json_path_int(
+                "https://chain.so/api/v2/get_info/DOGE", "data/blocks"
+            ),
+        )
     ]
-

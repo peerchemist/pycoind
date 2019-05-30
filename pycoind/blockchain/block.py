@@ -31,46 +31,48 @@ from . import transaction
 from .. import coins
 from .. import util
 
-__all__ = ['Database', 'InvalidBlockException']
+__all__ = ["Database", "InvalidBlockException"]
 
 # A buffer of 32 chr(0) bytes
 _0 = buffer(chr(0) * 32)
 
-class InvalidBlockException(Exception): pass
+
+class InvalidBlockException(Exception):
+    pass
+
 
 class Block(object):
-
     def __init__(self, database, row):
         keys = [n for (n, t, i) in database.Columns]
 
         self.__database = database
-        self.__data = dict(zip(keys, row))
+        self.__data = dict(list(zip(keys, row)))
 
     coin = property(lambda s: s.__database.coin)
 
-    hash = property(lambda s: str(s.__data['hash']))
+    hash = property(lambda s: str(s.__data["hash"]))
 
-    version = property(lambda s: s.__data['version'])
-    merkle_root = property(lambda s: str(s.__data['merkle_root']))
-    timestamp = property(lambda s: s.__data['timestamp'])
-    bits = property(lambda s: s.__data['bits'])
-    nonce = property(lambda s: s.__data['nonce'])
+    version = property(lambda s: s.__data["version"])
+    merkle_root = property(lambda s: str(s.__data["merkle_root"]))
+    timestamp = property(lambda s: s.__data["timestamp"])
+    bits = property(lambda s: s.__data["bits"])
+    nonce = property(lambda s: s.__data["nonce"])
 
-    height = property(lambda s: s.__data['height'])
-    txn_count = property(lambda s: s.__data['txn_count'])
+    height = property(lambda s: s.__data["height"])
+    txn_count = property(lambda s: s.__data["txn_count"])
 
-    mainchain = property(lambda s: s.__data['mainchain'])
+    mainchain = property(lambda s: s.__data["mainchain"])
 
     @property
     def transactions(self):
         if self.txn_count == 0:
             return None
 
-        if 'txns' not in self.__data:
+        if "txns" not in self.__data:
             txns = tuple(self.__database._txns._get_transactions(self._blockid))
-            self.__data['txns'] = txns
+            self.__data["txns"] = txns
 
-        return self.__data['txns']
+        return self.__data["txns"]
 
     @property
     def previous_hash(self):
@@ -82,7 +84,9 @@ class Block(object):
     @property
     def previous_block(self):
         cursor = self.__database._cursor()
-        cursor.execute(self.__database.sql_select + ' where id = ?', (self._previous_blockid, ))
+        cursor.execute(
+            self.__database.sql_select + " where id = ?", (self._previous_blockid,)
+        )
         row = cursor.fetchone()
         if row:
             return Block(self.__database, row)
@@ -91,59 +95,61 @@ class Block(object):
     @property
     def next_block(self):
         cursor = self.__database._cursor()
-        cursor.execute(self.__database.sql_select + ' where previous_id = ?', (self._blockid, ))
+        cursor.execute(
+            self.__database.sql_select + " where previous_id = ?", (self._blockid,)
+        )
         row = cursor.fetchone()
         if row:
             return Block(self.__database, row)
         return None
 
     def __str__(self):
-        return '<Block %s>' % (self.hash.encode('hex'), )
-
+        return "<Block %s>" % (self.hash.encode("hex"),)
 
     # mostly just for internal use... mostly.
-    _blockid = property(lambda s: s.__data['id'])
-    _previous_blockid = property(lambda s: s.__data['previous_id'])
+    _blockid = property(lambda s: s.__data["id"])
+    _previous_blockid = property(lambda s: s.__data["previous_id"])
 
     def _check_merkle_root(self, merkle_root):
-        'Checks the merkle_root is correct. Internal use.'
+        "Checks the merkle_root is correct. Internal use."
 
         if merkle_root != self.merkle_root:
-            raise InvalidBlockException('invalid merkle root')
+            raise InvalidBlockException("invalid merkle root")
 
     def _update_transactions(self, transactions):
-        '''Update the database with the transaction count and attaches the
-           transactions to this Block instance. INTERNAL USE ONLY!!'''
+        """Update the database with the transaction count and attaches the
+           transactions to this Block instance. INTERNAL USE ONLY!!"""
 
         cursor = self.__database._cursor()
-        cursor.execute('update blocks set txn_count = ? where id = ?', (len(transactions), self._blockid))
+        cursor.execute(
+            "update blocks set txn_count = ? where id = ?",
+            (len(transactions), self._blockid),
+        )
         self.__database._connection.commit()
 
-        self.__data['txns'] = transactions
-        self.__data['txn_count'] = len(transactions)
+        self.__data["txns"] = transactions
+        self.__data["txn_count"] = len(transactions)
 
 
 class Database(database.Database):
 
     Columns = [
-        ('id', 'integer primary key', False),
-        ('previous_id', 'integer not null', True),
-
-        ('hash', 'blob unique not null', True),
-        ('version', 'integer not null', False),
-        ('merkle_root', 'blob not null', False),
-        ('timestamp', 'integer not null', False),
-        ('bits', 'integer not null', False),
-        ('nonce', 'integer not null', False),
-
-        ('height', 'integer not null', True),
-        ('txn_count', 'integer not null', True),
-        ('mainchain', 'boolean not null', False),
+        ("id", "integer primary key", False),
+        ("previous_id", "integer not null", True),
+        ("hash", "blob unique not null", True),
+        ("version", "integer not null", False),
+        ("merkle_root", "blob not null", False),
+        ("timestamp", "integer not null", False),
+        ("bits", "integer not null", False),
+        ("nonce", "integer not null", False),
+        ("height", "integer not null", True),
+        ("txn_count", "integer not null", True),
+        ("mainchain", "boolean not null", False),
     ]
 
-    Name = 'blocks'
+    Name = "blocks"
 
-    def __init__(self, data_dir = None, coin = coins.Bitcoin):
+    def __init__(self, data_dir=None, coin=coins.Bitcoin):
         database.Database.__init__(self, data_dir, coin)
 
         # connect to the block database
@@ -151,7 +157,6 @@ class Database(database.Database):
 
         # transaction database (used by Block to for .transactions)
         self._txns = transaction.Database(self.data_dir, coin)
-
 
     def populate_database(self, cursor):
 
@@ -161,29 +166,27 @@ class Database(database.Database):
 
         # add the genesis block
         genesis = [
-            cursor.lastrowid,                          # previous_id
+            cursor.lastrowid,  # previous_id
             buffer(self.coin.genesis_block_hash),
             self.coin.genesis_version,
             buffer(self.coin.genesis_merkle_root),
             self.coin.genesis_timestamp,
             self.coin.genesis_bits,
             self.coin.genesis_nonce,
-            0,                                         # height
-            0,                                         # txn_count
-            1,                                         # mainchain
+            0,  # height
+            0,  # txn_count
+            1,  # mainchain
         ]
         cursor.execute(self.sql_insert, genesis)
-
 
     def _cursor(self):
         return self._connection.cursor()
 
-
     def add_header(self, header):
-        '''Adds a block to the database (if not present) and returns it.
+        """Adds a block to the database (if not present) and returns it.
 
            If a block's transactions is None, it means that only the block
-           header is present in the database.'''
+           header is present in the database."""
 
         # Calculate the block hash
         binary_header = header.binary()[:80]
@@ -191,7 +194,7 @@ class Database(database.Database):
         block_hash = util.sha256d(binary_header)
 
         # Already exists and nothing new
-        existing = self.get(block_hash, orphans = True)
+        existing = self.get(block_hash, orphans=True)
         if existing:
             return False
 
@@ -201,18 +204,20 @@ class Database(database.Database):
 
         # verify the block hits the target
         if not util.verify_target(self.coin, header):
-            raise InvalidBlockException('block proof-of-work is greater than target')
+            raise InvalidBlockException("block proof-of-work is greater than target")
 
         # find the previous block
-        previous_block = self.get(header.prev_block, orphans = True)
+        previous_block = self.get(header.prev_block, orphans=True)
         if not previous_block:
-            raise InvalidBlockException('previous block does not exist')
+            raise InvalidBlockException("previous block does not exist")
 
         cursor = self._cursor()
-        cursor.execute('begin immediate transaction')
+        cursor.execute("begin immediate transaction")
 
         # find the top block
-        cursor.execute(self.sql_select + ' where mainchain = 1 order by height desc limit 1')
+        cursor.execute(
+            self.sql_select + " where mainchain = 1 order by height desc limit 1"
+        )
         top_block = Block(self, cursor.fetchone())
 
         height = previous_block.height + 1
@@ -225,7 +230,9 @@ class Database(database.Database):
             # update all blocks from previous_block to the fork as mainchain
             cur = previous_block
             while not cur.mainchain:
-                cursor.execute('update blocks set mainchain = 1 where id = ?', (cur._blockid, ))
+                cursor.execute(
+                    "update blocks set mainchain = 1 where id = ?", (cur._blockid,)
+                )
                 cur = cur.previous_block
 
             forked_at = cur.hash
@@ -233,84 +240,98 @@ class Database(database.Database):
             # update all blocks from the old top (now orphan) to the fork as not mainchain
             cur = top_block
             while cur.hash != forked_at:
-                cursor.execute('update blocks set mainchain = 0 where id = ?', (cur._blockid, ))
+                cursor.execute(
+                    "update blocks set mainchain = 0 where id = ?", (cur._blockid,)
+                )
                 cur = cur.previous_block
 
         # add the block to the database
         cursor = self._cursor()
-        row = (previous_block._blockid, buffer(block_hash), header.version,
-               buffer(header.merkle_root), header.timestamp, header.bits,
-               header.nonce, height, 0, mainchain)
+        row = (
+            previous_block._blockid,
+            buffer(block_hash),
+            header.version,
+            buffer(header.merkle_root),
+            header.timestamp,
+            header.bits,
+            header.nonce,
+            height,
+            0,
+            mainchain,
+        )
         cursor.execute(self.sql_insert, row)
-        #lastrowid = cursor.lastrowid
+        # lastrowid = cursor.lastrowid
         self._connection.commit()
 
         return True
 
-
     def _get(self, blockid):
-        'Return a block for a blockid. Internal use only.'
+        "Return a block for a blockid. Internal use only."
 
         cursor = self._cursor()
-        cursor.execute(self.sql_select + ' where id = ?', (blockid, ))
+        cursor.execute(self.sql_select + " where id = ?", (blockid,))
         row = cursor.fetchone()
         if row:
             return Block(self, row)
 
         return None
 
+    def get(self, blockhash, default=None, orphans=False):
+        "Return the block with the hash, or None if not in the block chain."
 
-    def get(self, blockhash, default = None, orphans = False):
-        'Return the block with the hash, or None if not in the block chain.'
-
-        sql = ' where hash = ?'
+        sql = " where hash = ?"
         if not orphans:
-            sql += ' and mainchain = 1'
+            sql += " and mainchain = 1"
 
         cursor = self._cursor()
-        cursor.execute(self.sql_select + sql, (buffer(blockhash), ))
+        cursor.execute(self.sql_select + sql, (buffer(blockhash),))
         row = cursor.fetchone()
         if row:
             return Block(self, row)
 
         return default
 
-
     def block_locator_hashes(self):
-        'Return a list of hashes suitable as a block locator hash.'
+        "Return a list of hashes suitable as a block locator hash."
 
         # Find the height of the block chain
-        hashes = [ ]
+        hashes = []
 
         # First 10...
         offset = 0
         cursor = self._cursor()
-        cursor.execute('select hash, height from blocks where mainchain = 1 and height > 0 order by height desc limit 10')
+        cursor.execute(
+            "select hash, height from blocks where mainchain = 1 and height > 0 order by height desc limit 10"
+        )
         rows = cursor.fetchall()
         hashes.extend([str(hash) for (hash, offset) in rows])
         offset -= 1
 
         # ...then step down by twice the previous step...
         if offset > 0:
-            for i in xrange(1, int(math.log(2 * offset, 2))):
-                if offset <= 1: break
-                cursor.execute('select hash from blocks where mainchain = 1 and height = ?', (offset, ))
+            for i in range(1, int(math.log(2 * offset, 2))):
+                if offset <= 1:
+                    break
+                cursor.execute(
+                    "select hash from blocks where mainchain = 1 and height = ?",
+                    (offset,),
+                )
                 hashes.append(str(cursor.fetchone()[0]))
-                offset -= (1 << i)
+                offset -= 1 << i
 
         # ...finally the genesis hash
         hashes.append(self.coin.genesis_block_hash)
 
         return hashes
 
-
-    def locate_blocks(self, locator, count = 500, hash_stop = None):
+    def locate_blocks(self, locator, count=500, hash_stop=None):
 
         # Find the first block that matches
         block = None
         for hash in locator:
             block = self.get_block(hash)
-            if block: break
+            if block:
+                break
 
         # no matching block... :'(
         if block is None:
@@ -318,18 +339,18 @@ class Database(database.Database):
 
         # Select the next count rows
         cursor = self._cursor()
-        sql = ' where mainchain = 1 and height > ? order by height limit %d' % count
-        cursor.execute(self._SELECT + sql, (block.height, ))
+        sql = " where mainchain = 1 and height > ? order by height limit %d" % count
+        cursor.execute(self._SELECT + sql, (block.height,))
 
         # Wrap the row in the Block object
-        blocks = [ ]
+        blocks = []
         for row in cursor.fetchall():
             block = Block(self, row)
             blocks.append(block)
-            if hash_stop == block.hash: break
+            if hash_stop == block.hash:
+                break
 
         return blocks
-
 
     def __getitem__(self, name):
 
@@ -340,7 +361,9 @@ class Database(database.Database):
 
             # get the highest block
             cursor = self._cursor()
-            cursor.execute(self.sql_select + ' where mainchain = 1 order by height desc limit 1')
+            cursor.execute(
+                self.sql_select + " where mainchain = 1 order by height desc limit 1"
+            )
             row = cursor.fetchone()
 
             # row is currently the top (ie. -1); otherwise use the below search
@@ -351,7 +374,9 @@ class Database(database.Database):
         # find the block
         if name >= 0 and row is None:
             cursor = self._cursor()
-            cursor.execute(self.sql_select + ' where mainchain = 1 and height = ?', (name, ))
+            cursor.execute(
+                self.sql_select + " where mainchain = 1 and height = ?", (name,)
+            )
             row = cursor.fetchone()
 
         # wrap it up and return it
@@ -361,59 +386,56 @@ class Database(database.Database):
         # nothing found
         raise IndexError()
 
-
     def __len__(self):
         highest = self[-1]
         return highest.height + 1
 
-
-    def incomplete_blocks(self, from_block = None, max_count = 1000):
+    def incomplete_blocks(self, from_block=None, max_count=1000):
         cursor = self._cursor()
 
-        sql = ' where txn_count = 0 and mainchain = 1 and height >= 0'
+        sql = " where txn_count = 0 and mainchain = 1 and height >= 0"
         if from_block:
-            sql += (' and id > %d' % from_block._blockid)
+            sql += " and id > %d" % from_block._blockid
 
-        sql += ' order by id asc'
+        sql += " order by id asc"
 
         if max_count:
-            sql += (' limit %d' % max_count)
+            sql += " limit %d" % max_count
 
         cursor.execute(self.sql_select + sql)
 
         return [Block(self, r) for r in cursor.fetchall()]
 
-
     def incomplete_block_count(self):
         cursor = self._cursor()
-        cursor.execute('select count(*) from blocks where txn_count = 0 and mainchain = 1 and height >= 0')
+        cursor.execute(
+            "select count(*) from blocks where txn_count = 0 and mainchain = 1 and height >= 0"
+        )
         return cursor.fetchone()[0]
 
-
     def _TODO_generate_checkpoint_list(self):
-        '''Build a list of hashes that make good checkpoints.
+        """Build a list of hashes that make good checkpoints.
 
            What makes a good checkoint?
            - all nearby blocks have monotonic timestamps
            - contains no "strange" transactions
 
-           See: https://github.com/bitcoin/bitcoin/blob/master/src/checkpoints.cpp'''
+           See: https://github.com/bitcoin/bitcoin/blob/master/src/checkpoints.cpp"""
 
         pass
-
 
     def close(self):
         self._connection.close()
 
-
     def __iter__(self):
         cursor = self._cursor()
-        cursor.execute(self.sql_select + ' where mainchain = 1 and height >= 0 order by height asc')
+        cursor.execute(
+            self.sql_select + " where mainchain = 1 and height >= 0 order by height asc"
+        )
 
         while True:
             rows = cursor.fetchmany()
-            if not rows: raise StopIteration()
+            if not rows:
+                raise StopIteration()
             for row in rows:
                 yield Block(self, row)
-
-

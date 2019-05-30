@@ -22,10 +22,11 @@
 
 from .. import util
 
-__all__ = ['Coin', 'satoshi_per_coin']
+__all__ = ["Coin", "satoshi_per_coin"]
 
 
 satoshi_per_coin = 100000000
+
 
 class Coin(object):
     name = None
@@ -39,11 +40,11 @@ class Coin(object):
     def block_creation_fee(block):
         return (50 * 100000000) >> (block.height // 210000)
 
-    symbols = [ ]
+    symbols = []
     symbol = None
 
     protocol_version = 70002
-    dns_seeds = [ ]
+    dns_seeds = []
 
     port = 0
 
@@ -51,7 +52,7 @@ class Coin(object):
     genesis_block_hash = chr(0) * 32
     genesis_merkle_root = chr(0) * 32
     genesis_timestamp = 0
-    genesis_bits = 504365040    # 0x1e0ffff0
+    genesis_bits = 504365040  # 0x1e0ffff0
     genesis_nonce = 0
 
     magic = chr(0) * 4
@@ -75,9 +76,4 @@ class Coin(object):
         return cmp(self.name, other.name)
 
     def __str__(self):
-        return '<%s>' % self.name.capitalize()
-
-
-
-
-
+        return "<%s>" % self.name.capitalize()

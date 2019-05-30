@@ -21,11 +21,42 @@
 # THE SOFTWARE.
 
 
-from . import opcodes
+import struct
 
-from .bytevector import ByteVector
-from .script import Script, Tokenizer
+from .util import block_xor
 
-from .script import TEMPLATE_PAY_TO_PUBKEY, TEMPLATE_PAY_TO_PUBKEY_HASH
+def pbkdf2(password, salt, count, key_length, prf):
+    '''Returns the result of the Password-Based Key Derivation Function 2.
+      prf - a psuedorandom function
 
-__all__ = ["ByteVector", "opcodes", "Script", "Tokenizer"]
+       See http://en.wikipedia.org/wiki/PBKDF2
+    '''
+
+    def f(block_number):
+        '''The function "f".'''
+
+        U = prf(password, salt + struct.pack('>L', block_number))
+
+        if count > 1:
+            U = [ c for c in U ]
+            for i in xrange(2, 1 + count):
+                block_xor(prf(password, ''.join(U)), 0, U, 0, len(U))
+        U = ''.join(U)
+
+        return U
+
+    size = 0
+
+    block_number = 0
+    blocks = [ ]
+
+    # The iterations
+    while size < key_length:
+        block_number += 1
+        block = f(block_number)
+
+        blocks.append(block)
+        size += len(block)
+
+    return ''.join(blocks)[:key_length]
+

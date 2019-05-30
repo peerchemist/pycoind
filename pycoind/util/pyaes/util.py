@@ -25,6 +25,7 @@ def append_PKCS7_padding(data):
     pad = 16 - (len(data) % 16)
     return data + pad * chr(pad)
 
+
 def strip_PKCS7_padding(data):
     if len(data) % 16 != 0:
         raise ValueError("invalid length")

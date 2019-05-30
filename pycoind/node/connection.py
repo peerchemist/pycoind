@@ -36,15 +36,14 @@ BLOCK_SIZE = 8192
 
 
 class Connection(asyncore.dispatcher):
-    '''A connection to a remote peer node.
+    """A connection to a remote peer node.
 
        Handles buffering input and output into messages and call the
-       corresponding command_* handler in daemon.'''
+       corresponding command_* handler in daemon."""
 
     SERVICES = protocol.SERVICE_NODE_NETWORK
 
-
-    def __init__(self, node, address, sock = None):
+    def __init__(self, node, address, sock=None):
 
         # this is also available as self._map from dispatcher
         self._node = node
@@ -78,18 +77,18 @@ class Connection(asyncore.dispatcher):
 
         # if we get a socket, we started because of an accept
         if sock:
-            asyncore.dispatcher.__init__(self, sock = sock, map = node)
+            asyncore.dispatcher.__init__(self, sock=sock, map=node)
 
             self._incoming = True
 
         # otherwise, we get an address to connect to
         else:
-            asyncore.dispatcher.__init__(self, map = node)
+            asyncore.dispatcher.__init__(self, map=node)
 
             try:
                 self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.connect(address)
-            except Exception, e:
+            except Exception as e:
                 self.handle_close()
                 raise e
 
@@ -98,18 +97,21 @@ class Connection(asyncore.dispatcher):
         # we bootstrap communication with the node by broadcasting our version
         now = time.time()
         message = protocol.Version(
-                      version = node.coin.protocol_version,
-                      services = self.SERVICES,
-                      timestamp = now,
-                      addr_recv = protocol.NetworkAddress(now, self.SERVICES, address[0], address[1]),
-                      addr_from = protocol.NetworkAddress(now, self.SERVICES, node.external_ip_address, node.port),
-                      nonce = os.urandom(8),
-                      user_agent = node.user_agent,
-                      start_height = node.blockchain_height,
-                      relay = False
-                  )
+            version=node.coin.protocol_version,
+            services=self.SERVICES,
+            timestamp=now,
+            addr_recv=protocol.NetworkAddress(
+                now, self.SERVICES, address[0], address[1]
+            ),
+            addr_from=protocol.NetworkAddress(
+                now, self.SERVICES, node.external_ip_address, node.port
+            ),
+            nonce=os.urandom(8),
+            user_agent=node.user_agent,
+            start_height=node.blockchain_height,
+            relay=False,
+        )
         self.send_message(message)
-
 
     # remote node details
     address = property(lambda s: s._address)
@@ -138,11 +140,10 @@ class Connection(asyncore.dispatcher):
     # last time we heard from the remote node
     timestamp = property(lambda s: (time.time() - s._last_rx_time))
 
-
-    def add_banscore(self, penalty = 1):
+    def add_banscore(self, penalty=1):
         self._banscore += penalty
 
-    def reduce_banscore(self, penalty = 1):
+    def reduce_banscore(self, penalty=1):
         if (self._banscore - penalty) < 0:
             self._banscore = 0
         else:
@@ -167,14 +168,13 @@ class Connection(asyncore.dispatcher):
 
         return True
 
-
     def handle_read(self):
 
         # read some data and add it to our incoming buffer
         try:
             chunk = self.recv(BLOCK_SIZE)
-        except Exception, e:
-            chunk = ''
+        except Exception as e:
+            chunk = ""
 
         # remote connection closed
         if not chunk:
@@ -199,18 +199,16 @@ class Connection(asyncore.dispatcher):
             try:
                 message = protocol.Message.parse(payload, self.node.coin.magic)
                 self.handle_message(message)
-            except protocol.UnknownMessageException, e:
+            except protocol.UnknownMessageException as e:
                 self.node.invalid_command(self, self._recv_buffer[:length], e)
-            except protocol.MessageFormatException, e:
+            except protocol.MessageFormatException as e:
                 self.node.invalid_command(self, self._recv_buffer[:length], e)
 
             # remove the message bytes from the buffer
             self._recv_buffer = self._recv_buffer[length:]
 
-
     def writable(self):
         return len(self._send_buffer) > 0
-
 
     def handle_write(self):
         try:
@@ -218,37 +216,42 @@ class Connection(asyncore.dispatcher):
             self._tx_bytes += sent
             self.node._tx_bytes += sent
             self._last_tx_time = time.time()
-        except Exception, e:
+        except Exception as e:
             self.handle_close()
             return
 
         self._send_buffer = self._send_buffer[sent:]
 
-
     def handle_error(self):
         t, v, tb = sys.exc_info()
         if t == socket.error:
-            self.node.log('--- connection refused', peer = self, level = self.node.LOG_LEVEL_INFO)
+            self.node.log(
+                "--- connection refused", peer=self, level=self.node.LOG_LEVEL_INFO
+            )
         else:
-            self.node.log(traceback.format_exc(), peer = self, level = self.node.LOG_LEVEL_ERROR)
+            self.node.log(
+                traceback.format_exc(), peer=self, level=self.node.LOG_LEVEL_ERROR
+            )
 
         del tb
 
         self.handle_close()
 
-
     def handle_close(self):
         try:
             self.close()
-        except Exception, e:
+        except Exception as e:
             pass
 
         self.node.disconnected(self)
 
-
     def handle_message(self, message):
-        self.node.log('<<< ' + str(message), peer = self, level = self.node.LOG_LEVEL_PROTOCOL)
-        self.node.log('<<< ' + message._debug(), peer = self, level = self.node.LOG_LEVEL_DEBUG)
+        self.node.log(
+            "<<< " + str(message), peer=self, level=self.node.LOG_LEVEL_PROTOCOL
+        )
+        self.node.log(
+            "<<< " + message._debug(), peer=self, level=self.node.LOG_LEVEL_DEBUG
+        )
 
         kwargs = dict((k, getattr(message, k)) for (k, t) in message.properties)
 
@@ -270,21 +273,28 @@ class Connection(asyncore.dispatcher):
 
             # @TODO: check expiration, etc.
             if message.verify(self.node.coin.alert_public_key):
-                kwargs = dict((k, getattr(message, k)) for (k, t) in message.payload_properties)
+                kwargs = dict(
+                    (k, getattr(message, k)) for (k, t) in message.payload_properties
+                )
             elif message.verify(self.node.alert_public_key):
-                kwargs = dict((k, getattr(message, k)) for (k, t) in message.payload_properties)
+                kwargs = dict(
+                    (k, getattr(message, k)) for (k, t) in message.payload_properties
+                )
             else:
                 self.node.invalid_alert(self, message)
                 message = None
 
         if message:
-            getattr(self.node, 'command_' + message.name)(self, **kwargs)
-
+            getattr(self.node, "command_" + message.name)(self, **kwargs)
 
     def send_message(self, message):
         msg = str(message)
-        self.node.log('>>> ' + str(message), peer = self, level = self.node.LOG_LEVEL_PROTOCOL)
-        self.node.log('>>> ' + message._debug(), peer = self, level = self.node.LOG_LEVEL_DEBUG)
+        self.node.log(
+            ">>> " + str(message), peer=self, level=self.node.LOG_LEVEL_PROTOCOL
+        )
+        self.node.log(
+            ">>> " + message._debug(), peer=self, level=self.node.LOG_LEVEL_DEBUG
+        )
 
         self._send_buffer += message.binary(self.node.coin.magic)
 
@@ -295,4 +305,4 @@ class Connection(asyncore.dispatcher):
         return self == other
 
     def __str__(self):
-        return '<Connection(%s) %s:%d>' % (self._fileno, self.ip_address, self.port)
+        return "<Connection(%s) %s:%d>" % (self._fileno, self.ip_address, self.port)

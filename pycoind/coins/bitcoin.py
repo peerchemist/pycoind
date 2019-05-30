@@ -22,18 +22,19 @@
 
 from .. import util
 
-import coin
+from . import coin
 
 # https://github.com/bitcoin/bitcoin
 
-__all__ = ['Bitcoin']
+__all__ = ["Bitcoin"]
+
 
 class Bitcoin(coin.Coin):
 
     name = "bitcoin"
 
     # All symbols the coin uses and "primary" symbol
-    symbols = ['BTC', 'XBT']
+    symbols = ["BTC", "XBT"]
     symbol = symbols[0]
 
     # See: https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery
@@ -51,17 +52,23 @@ class Bitcoin(coin.Coin):
     rpc_port = 8332
 
     genesis_version = 1
-    genesis_block_hash = '6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000'.decode('hex')
-    genesis_merkle_root = '3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a'.decode('hex')
+    genesis_block_hash = "6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000".decode(
+        "hex"
+    )
+    genesis_merkle_root = "3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a".decode(
+        "hex"
+    )
     genesis_timestamp = 1231006505
     genesis_bits = 486604799
     genesis_nonce = 2083236893
 
-    magic = '\xf9\xbe\xb4\xd9'
+    magic = "\xf9\xbe\xb4\xd9"
 
     address_version = chr(0)
 
-    alert_public_key = '04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284'.decode('hex')
+    alert_public_key = "04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284".decode(
+        "hex"
+    )
 
     # Not sure if these will be needed later... from chainparams
     secret_key = chr(239)
@@ -71,19 +78,37 @@ class Bitcoin(coin.Coin):
     script_address = chr(5)
 
     block_height_guess = [
-        ('blockchain.info', util.fetch_url_json_path_int('https://blockchain.info/latestblock', 'height')),
-        ('blockexplorer.com', util.fetch_url_int('https://blockexplorer.com/q/getblockcount')),
-        ('blockr.io', util.fetch_url_json_path_int('http://btc.blockr.io/api/v1/coin/info', 'data/last_block/nb')),
-        ('chain.so', util.fetch_url_json_path_int('https://chain.so/api/v2/get_info/BTC', 'data/blocks')),
+        (
+            "blockchain.info",
+            util.fetch_url_json_path_int(
+                "https://blockchain.info/latestblock", "height"
+            ),
+        ),
+        (
+            "blockexplorer.com",
+            util.fetch_url_int("https://blockexplorer.com/q/getblockcount"),
+        ),
+        (
+            "blockr.io",
+            util.fetch_url_json_path_int(
+                "http://btc.blockr.io/api/v1/coin/info", "data/last_block/nb"
+            ),
+        ),
+        (
+            "chain.so",
+            util.fetch_url_json_path_int(
+                "https://chain.so/api/v2/get_info/BTC", "data/blocks"
+            ),
+        ),
     ]
 
 
-#class BitcoinTestnet(Bitcoin):
+# class BitcoinTestnet(Bitcoin):
 #    name = "bitcoin-testnet"
 #    address_version = chr(111)
 #    magic = "\xfa\xbf\xb5\xda"
 
-#class BitcoinTestnet3(Bitcoin):
+# class BitcoinTestnet3(Bitcoin):
 #    name = "bitcoin-testnet3"
 #    port = 18333
 #    magic = "\x0b\x11\x09\x07"
