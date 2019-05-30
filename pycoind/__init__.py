@@ -22,27 +22,27 @@
 
 
 # import top levels
-import blockchain
-import coins
-import node
-import protocol
-import script
-import util
-import wallet
+import pycoind.blockchain as blockchain
+import pycoind.coins as coins
+import pycoind.node as node
+import pycoind.protocol as protocol
+import pycoind.script as script
+import pycoind.util as util
+import pycoind.wallet as wallet
 
 
 # expose version
-from .node.basenode import VERSION
+from pycoind.node.basenode import VERSION
 
 
 # expose common objects
-from .blockchain import BlockChain
-from .coins import Coins, get_coin
-from .node import AddressInUseException, BaseNode, Node
-from .script import Script, Tokenizer
-from .wallet import Address, EncryptedAddress, get_address, PrintedAddress
+from blockchain import BlockChain
+from coins import Coins, get_coin
+from node import AddressInUseException, BaseNode, Node
+from script import Script, Tokenizer
+from wallet import Address, EncryptedAddress, get_address, PrintedAddress
 
 
 # This key is used to verify alerts and primer blocks
 # Only the pycoind developer (ricmoo@pycoind.org) has access to the private key
-from .node.basenode import PUBLIC_KEY as PUBLIC_KEY
+from pycoind.node.basenode import PUBLIC_KEY as PUBLIC_KEY
