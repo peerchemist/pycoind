@@ -52,12 +52,8 @@ class Bitcoin(coin.Coin):
     rpc_port = 8332
 
     genesis_version = 1
-    genesis_block_hash = "6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000".decode(
-        "hex"
-    )
-    genesis_merkle_root = "3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a".decode(
-        "hex"
-    )
+    genesis_block_hash = bytearray.fromhex("6fe28c0ab6f1b372c1a6a246ae63f74f931e8365e15a089c68d6190000000000")
+    genesis_merkle_root = bytearray.fromhex("3ba3edfd7a7b12b27ac72c3e67768f617fc81bc3888a51323a9fb8aa4b1e5e4a")
     genesis_timestamp = 1231006505
     genesis_bits = 486604799
     genesis_nonce = 2083236893
@@ -66,9 +62,7 @@ class Bitcoin(coin.Coin):
 
     address_version = chr(0)
 
-    alert_public_key = "04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284".decode(
-        "hex"
-    )
+    alert_public_key = bytearray.fromhex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
 
     # Not sure if these will be needed later... from chainparams
     secret_key = chr(239)
