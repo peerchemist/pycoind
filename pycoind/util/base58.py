@@ -16,7 +16,7 @@ bseq = bytes
 buffer = lambda s: s.buffer
 
 
-def b58encode(v: bytes) -> str:
+def encode(v: bytes) -> str:
     '''Encode a string using Base58'''
 
     origlen = len(v)
@@ -36,7 +36,7 @@ def b58encode(v: bytes) -> str:
     return (result + alphabet[0] * (origlen - newlen))[::-1]
 
 
-def b58decode(v: str) -> bytes:
+def decode(v: str) -> bytes:
     '''Decode a Base58 encoded string'''
 
     origlen = len(v)
@@ -56,14 +56,14 @@ def b58decode(v: str) -> bytes:
     return (bseq(result) + b'\0' * (origlen - newlen))[::-1]
 
 
-def b58encode_check(v: bytes) -> str:
+def encode_check(v: bytes) -> str:
     '''Encode a string using Base58 with a 4 character checksum'''
 
     digest = sha256(sha256(v).digest()).digest()
     return b58encode(v + digest[:4])
 
 
-def b58decode_check(v: str) -> bytes:
+def decode_check(v: str) -> bytes:
     '''Decode and verify the checksum of a Base58 encoded string'''
 
     result = b58decode(v)
